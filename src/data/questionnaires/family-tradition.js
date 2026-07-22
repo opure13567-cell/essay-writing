@@ -10,9 +10,9 @@ export const familyTraditionQuestionnaire = {
       questions: [
         { id: 'name', type: 'text', label: '姓名', placeholder: '请输入你的姓名', required: true },
         { id: 'school', type: 'text', label: '学校/学院', placeholder: '如：XX大学XX学院', required: true },
-        { id: 'major', type: 'text', label: '专业', placeholder: '请输入你的专业全称', required: true },
-        { id: 'grade', type: 'select', label: '年级', options: ['2024级', '2025级', '2026级', '其他'], required: true },
-        { id: 'class_name', type: 'text', label: '班级', placeholder: '如：1班', required: true },
+        { id: 'hometown', type: 'text', label: '家乡所在地', placeholder: '如：湖南长沙（写省市即可）', required: true },
+        { id: 'major', type: 'text', label: '专业及班级', placeholder: '如：计算机科学1班', required: true },
+        { id: 'grade', type: 'select', label: '年级', options: ['2023级', '2024级', '2025级', '其他'], required: true },
         { id: 'student_id', type: 'text', label: '学号', placeholder: '用于文件命名（学号+姓名）', required: true },
         { id: 'title', type: 'text', label: '报告标题', placeholder: '可自拟，留空则由AI自动生成', required: false },
       ],
@@ -61,8 +61,8 @@ export const familyTraditionQuestionnaire = {
           options: [
             { value: 'heirlooms', label: '有老物件/奖章/军功章——至少1-2件有分量的' },
             { value: 'photos_certs', label: '有一些照片/证书——如党费证、毕业照、工作照' },
-            { value: 'none', label: '基本没有——没刻意保留过这类东西' },
-            { value: 'unsure', label: '不确定——需要回家翻翻看' },
+            { value: 'no_artifacts', label: '基本没有——没刻意保留过这类东西' },
+            { value: 'unsure_artifacts', label: '不确定——需要回家翻翻看' },
           ],
         },
         {
@@ -71,8 +71,8 @@ export const familyTraditionQuestionnaire = {
           options: [
             { value: 'detailed', label: '有详细故事——比如祖辈/父辈靠读书走出农村、或因为没文化留下遗憾' },
             { value: 'vague', label: '有大概印象——知道是这么回事，但细节模糊' },
-            { value: 'none', label: '没什么特别的故事——就是单纯觉得读书/诚实/勤奋重要' },
-            { value: 'unsure', label: '不确定——需要回去跟父母聊了才知道' },
+            { value: 'no_story', label: '没什么特别的故事——就是单纯觉得读书/诚实/勤奋重要' },
+            { value: 'unsure_story', label: '不确定——需要回去跟父母聊了才知道' },
           ],
         },
         {

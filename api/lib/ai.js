@@ -1,4 +1,6 @@
-import { buildPrompt } from './templates/family-tradition.js'
+import { buildPrompt as buildFamilyPrompt } from './templates/family-tradition.js'
+import { buildPrompt as buildHometownPrompt } from './templates/hometown-change.js'
+import { buildPrompt as buildIndustryPrompt } from './templates/industry-interview.js'
 
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
 
@@ -14,7 +16,11 @@ export async function generateEssay(order) {
   try {
     const qData = JSON.parse(order.description)
     if (qData.assignment_type === 'family_tradition') {
-      prompt = buildPrompt(qData)
+      prompt = buildFamilyPrompt(qData)
+    } else if (qData.assignment_type === 'hometown_change') {
+      prompt = buildHometownPrompt(qData)
+    } else if (qData.assignment_type === 'industry_interview') {
+      prompt = buildIndustryPrompt(qData)
     }
   } catch {
     // 非JSON格式，兼容旧订单
@@ -50,7 +56,7 @@ ${order.description}`
     body: JSON.stringify({
       model: 'deepseek-chat',
       max_tokens: 10000,
-      temperature: 0.8,
+      temperature: 0.9,
       messages: [{ role: 'user', content: prompt }],
     }),
   })

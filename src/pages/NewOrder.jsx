@@ -2,10 +2,14 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import QuestionFlow from '../components/QuestionFlow'
 import { familyTraditionQuestionnaire } from '../data/questionnaires/family-tradition'
+import { hometownChangeQuestionnaire } from '../data/questionnaires/hometown-change'
+import { industryInterviewQuestionnaire } from '../data/questionnaires/industry-interview'
 import { api } from '../utils/api'
 
 const QUESTIONNAIRES = {
   family_tradition: familyTraditionQuestionnaire,
+  hometown_change: hometownChangeQuestionnaire,
+  industry_interview: industryInterviewQuestionnaire,
 }
 
 export default function NewOrder() {

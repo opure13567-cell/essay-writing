@@ -49,6 +49,7 @@ async function createOrder(req, res, userToken) {
 
   // 统一定价 ¥5
   const price = 5
+  const wordCount = 5000
 
   const { data, error } = await supabaseAdmin
     .from('orders')

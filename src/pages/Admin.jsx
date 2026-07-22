@@ -1,6 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../utils/api'
+import { downloadDocx } from '../utils/generateDocx'
 import StatusBadge from '../components/StatusBadge'
+
+// 新订单通知音（简短提示音）
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.frequency.value = 800
+    osc.type = 'sine'
+    gain.gain.value = 0.3
+    osc.start()
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
+    osc.stop(ctx.currentTime + 0.5)
+  } catch {}
+}
 
 export default function Admin() {
   const [password, setPassword] = useState(() => localStorage.getItem('admin_password') || '')
@@ -10,11 +28,54 @@ export default function Admin() {
   const [generating, setGenerating] = useState({})
   const [editContent, setEditContent] = useState({})
   const [activeTab, setActiveTab] = useState('all')
+  const [newOrderAlert, setNewOrderAlert] = useState(false)
+  const knownIdsRef = useRef(new Set())
+
+  // 自动刷新订单（每30秒）
+  const loadOrders = useCallback(async (pwd) => {
+    setLoading(true)
+    try {
+      const data = await api.adminGetOrders(pwd || password)
+      // 检测新订单
+      const prevIds = knownIdsRef.current
+      const newOnes = data.filter(o => !prevIds.has(o.id))
+      if (newOnes.length > 0 && prevIds.size > 0) {
+        playNotificationSound()
+        setNewOrderAlert(true)
+        setTimeout(() => setNewOrderAlert(false), 5000)
+        // 浏览器通知
+        if (Notification.permission === 'granted') {
+          new Notification(`新订单！${newOnes[0].type}`, {
+            body: `有 ${newOnes.length} 个新订单，¥${newOnes[0].price}`,
+            icon: '✍️',
+          })
+        }
+      }
+      // 更新已知ID
+      knownIdsRef.current = new Set(data.map(o => o.id))
+      setOrders(data)
+    } catch {}
+    setLoading(false)
+  }, [password])
 
   // 尝试自动登录
   useEffect(() => {
     if (password) handleLogin(password)
   }, [])
+
+  // 请求通知权限
+  useEffect(() => {
+    if (authed && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [authed])
+
+  // 自动轮询
+  useEffect(() => {
+    if (!authed) return
+    const interval = setInterval(() => loadOrders(), 30000)
+    return () => clearInterval(interval)
+  }, [authed, loadOrders])
 
   const handleLogin = async (pwd) => {
     try {
@@ -26,15 +87,6 @@ export default function Admin() {
     } catch {
       setAuthed(false)
     }
-  }
-
-  const loadOrders = async (pwd) => {
-    setLoading(true)
-    try {
-      const data = await api.adminGetOrders(pwd || password)
-      setOrders(data)
-    } catch {}
-    setLoading(false)
   }
 
   const handleConfirmPayment = async (orderId) => {
@@ -115,6 +167,11 @@ export default function Admin() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4">
+      {newOrderAlert && (
+        <div className="bg-red-500 text-white text-center py-2 px-4 rounded-lg mb-3 animate-pulse text-sm font-medium">
+          🔔 有新订单！已自动刷新
+        </div>
+      )}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold">🔐 管理后台</h2>
         <button onClick={handleRefresh} className="text-sm text-blue-600">
@@ -162,6 +219,34 @@ export default function Admin() {
               {order.description}
             </div>
 
+            {/* 付款截图 */}
+            {order.payment_screenshot && (
+              <div>
+                <span className="text-xs text-gray-400">付款截图：</span>
+                <a
+                  href={order.payment_screenshot}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 text-xs text-blue-600 underline"
+                >
+                  点击查看大图
+                </a>
+                <img
+                  src={order.payment_screenshot}
+                  alt="付款截图"
+                  className="mt-1 rounded border border-gray-300 block"
+                  style={{ width: '160px', objectFit: 'contain' }}
+                  onError={(e) => {
+                    e.target.style.display = 'none'
+                    e.target.nextSibling.style.display = 'block'
+                  }}
+                />
+                <span className="hidden text-xs text-red-400 mt-1">
+                  无法加载预览，请点击上方链接查看
+                </span>
+              </div>
+            )}
+
             {/* 操作按钮 */}
             <div className="flex gap-2 flex-wrap">
               {/* 待确认付款 */}
@@ -198,7 +283,15 @@ export default function Admin() {
               )}
 
               {order.status === 'done' && (
-                <span className="text-sm text-green-600">✅ 已发稿</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-green-600">✅ 已发稿</span>
+                  <button
+                    onClick={() => downloadDocx(order)}
+                    className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200"
+                  >
+                    📥 下载Word
+                  </button>
+                </div>
               )}
             </div>
 

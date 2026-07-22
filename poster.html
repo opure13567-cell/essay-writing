@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>海报预览 - 形势与政策写作助手</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+    background: #e8ecf1;
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  }
+  .poster {
+    width: 375px;
+    min-height: 667px;
+    background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 30%, #ffffff 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  }
+  .top-bar {
+    background: #1a56db;
+    color: #fff;
+    text-align: center;
+    padding: 10px 16px;
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+  .hero {
+    padding: 20px 20px 12px;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.4;
+  }
+  .hero h1 .highlight { color: #1a56db; }
+  .hero .sub { font-size: 12px; color: #6b7280; margin-top: 4px; }
+  .hero .speed {
+    display: inline-block;
+    margin-top: 8px;
+    background: #fef2f2;
+    color: #dc2626;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  .steps {
+    padding: 0 20px 12px;
+  }
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1.5px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .step-num {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .step:nth-child(1) .step-num { background: #dbeafe; color: #1d4ed8; }
+  .step:nth-child(2) .step-num { background: #fef3c7; color: #b45309; }
+  .step:nth-child(3) .step-num { background: #d1fae5; color: #047857; }
+  .step:nth-child(4) .step-num { background: #ede9fe; color: #6d28d9; }
+  .step-info { flex: 1; }
+  .step-title { font-size: 13px; font-weight: 600; color: #111827; }
+  .step-desc  { font-size: 11px; color: #6b7280; margin-top: 1px; }
+
+  .trust {
+    padding: 0 20px 10px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .tag {
+    font-size: 10px;
+    color: #374151;
+    background: #f3f4f6;
+    padding: 4px 8px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+
+  .cta {
+    padding: 0 20px 16px;
+    text-align: center;
+  }
+  .qr-box {
+    display: inline-block;
+    background: #fff;
+    padding: 10px;
+    border-radius: 16px;
+    border: 2px dashed #cbd5e1;
+  }
+  .qr-box img {
+    width: 140px;
+    height: 140px;
+    display: block;
+  }
+  .qr-label {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 6px;
+  }
+  .slow-note {
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 6px;
+  }
+
+  .footer {
+    text-align: center;
+    padding: 10px 20px 14px;
+    font-size: 11px;
+    color: #9ca3af;
+    line-height: 1.6;
+  }
+  .footer .contact {
+    color: #6b7280;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="poster">
+
+  <div class="top-bar">📋 形势与政策 · 暑假作业</div>
+
+  <div class="hero">
+    <h1>5000字<span class="highlight">家风报告</span><br>选择题答完就<span class="highlight">生成Word</span></h1>
+    <div class="sub">没有AI味 · 自动排好版 · 学号命名即用</div>
+    <div class="speed">⚡ 付完款10分钟即可获得</div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-info">
+        <div class="step-title">📱 扫码 · 选择题作答</div>
+        <div class="step-desc">填个人信息 + 选家风素材，每题都有选项</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-info">
+        <div class="step-title">💰 付5元 · AI自动生成</div>
+        <div class="step-desc">根据你的答案定制生成，不是套模板</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-info">
+        <div class="step-title">📥 下载Word · 直接提交</div>
+        <div class="step-desc">宋体/行距/页边距全自动，文件名=学号+姓名</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="trust">
+    <span class="tag">✅ 无AI味</span>
+    <span class="tag">📄 直出Word</span>
+    <span class="tag">🎓 真人笔触</span>
+    <span class="tag">💰 仅5元</span>
+  </div>
+
+  <div class="cta">
+    <div class="qr-box">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://essay-writing-ehl.pages.dev" alt="扫码使用">
+    </div>
+    <div class="qr-label">📷 微信扫码，马上搞定</div>
+    <div class="slow-note">💡 网页打开有点慢，静静等待一会就好~</div>
+  </div>
+
+  <div class="footer">
+    形势与政策 · 我的家风家训 · 社会调查报告<br>
+    <span class="contact">🛠 售后请联系：opure0901（微信）</span>
+  </div>
+
+</div>
+
+</body>
+</html>

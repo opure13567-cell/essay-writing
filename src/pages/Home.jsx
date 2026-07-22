@@ -4,7 +4,7 @@ const ASSIGNMENT_TYPES = [
   {
     id: 'family_tradition',
     title: '我的家风家训',
-    subtitle: '形势与政策 · 社会调查报告',
+    subtitle: '形势与政策 · 2025、2024级',
     desc: '结合中华传统美德与红色家风，通过访谈梳理家风家训',
     icon: '🏠',
     words: '约5000字',
@@ -12,11 +12,18 @@ const ASSIGNMENT_TYPES = [
   {
     id: 'hometown_change',
     title: '家乡变迁看制度优势',
-    subtitle: '形势与政策 · 备选选题',
+    subtitle: '形势与政策 · 2025、2024级',
     desc: '从脱贫、乡村振兴、生态、科创等角度论述中国特色社会主义制度优势',
     icon: '🏙️',
     words: '约5000字',
-    coming: true,
+  },
+  {
+    id: 'industry_interview',
+    title: '行业人物访谈报告',
+    subtitle: '形势与政策 · 2023级',
+    desc: '选择三位目标行业从业者进行深度访谈，从行业特点、发展前景等多角度撰写报告',
+    icon: '👔',
+    words: '约5000-10000字',
   },
 ]
 
