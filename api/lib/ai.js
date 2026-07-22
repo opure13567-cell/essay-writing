@@ -1,9 +1,9 @@
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
 
 export async function generateEssay(order, template) {
-  const apiKey = process.env.CLAUDE_API_KEY
+  const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) {
-    throw new Error('AI API密钥未配置')
+    throw new Error('DeepSeek API密钥未配置')
   }
 
   const typeMap = {
@@ -22,16 +22,16 @@ export async function generateEssay(order, template) {
     .replace('{{words}}', String(order.word_count))
     .replace('{{description}}', order.description)
 
-  const res = await fetch(CLAUDE_API_URL, {
+  const res = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'deepseek-chat',
       max_tokens: Math.max(order.word_count * 2, 2000),
+      temperature: 0.8,
       messages: [
         {
           role: 'user',
@@ -43,14 +43,11 @@ export async function generateEssay(order, template) {
 
   if (!res.ok) {
     const errText = await res.text()
-    throw new Error(`AI调用失败: ${res.status} ${errText}`)
+    throw new Error(`DeepSeek调用失败: ${res.status} ${errText}`)
   }
 
   const data = await res.json()
-  const text = data.content
-    .filter(c => c.type === 'text')
-    .map(c => c.text)
-    .join('\n')
+  const text = data.choices[0]?.message?.content || ''
 
   return text
 }
