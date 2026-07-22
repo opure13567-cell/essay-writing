@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { api } from '../utils/api'
+import Admin from './Admin'
 
 const ASSIGNMENT_TYPES = [
   {
@@ -29,6 +32,37 @@ const ASSIGNMENT_TYPES = [
 
 export default function Home() {
   const navigate = useNavigate()
+  const [isAdmin, setIsAdmin] = useState(!!localStorage.getItem('admin_password'))
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [adminPwd, setAdminPwd] = useState('')
+  const [adminError, setAdminError] = useState('')
+
+  const handleAdminLogin = async (e) => {
+    e.preventDefault()
+    setAdminError('')
+    try {
+      await api.adminLogin(adminPwd)
+      localStorage.setItem('admin_password', adminPwd)
+      setIsAdmin(true)
+    } catch {
+      setAdminError('口令错误')
+    }
+  }
+
+  // 如果已登录后台，直接显示后台面板
+  if (isAdmin) {
+    return (
+      <div className="pb-4">
+        <button
+          onClick={() => { localStorage.removeItem('admin_password'); setIsAdmin(false) }}
+          className="text-sm text-red-500 py-2"
+        >
+          ← 退出后台
+        </button>
+        <Admin />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -88,6 +122,43 @@ export default function Home() {
         <p>📝 <strong>如何使用：</strong>选择题作答 → 付款¥5 → AI自动生成报告</p>
         <p>🤖 <strong>AI生成：</strong>根据你的答案定制化生成，非套模板</p>
         <p>📋 <strong>格式规范：</strong>自动遵循课程排版要求（宋体/行距/页边距）</p>
+      </div>
+
+      {/* 管理入口 */}
+      <div className="border-t border-gray-100 pt-4">
+        {!showAdmin ? (
+          <button
+            onClick={() => setShowAdmin(true)}
+            className="w-full text-center text-xs text-gray-300 hover:text-gray-400 py-2"
+          >
+            管理入口
+          </button>
+        ) : (
+          <form onSubmit={handleAdminLogin} className="space-y-3">
+            <p className="text-sm font-medium text-gray-600 text-center">🔐 管理后台</p>
+            <input
+              type="password"
+              value={adminPwd}
+              onChange={e => setAdminPwd(e.target.value)}
+              placeholder="请输入管理口令"
+              className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm outline-none focus:border-blue-500"
+            />
+            {adminError && <p className="text-red-500 text-xs text-center">{adminError}</p>}
+            <button
+              type="submit"
+              className="w-full py-3 bg-gray-800 text-white rounded-lg text-sm font-medium hover:bg-gray-900"
+            >
+              进入后台
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAdmin(false)}
+              className="w-full text-xs text-gray-400 py-1"
+            >
+              取消
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
