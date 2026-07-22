@@ -1,6 +1,6 @@
 import { supabaseAdmin } from './lib/supabase.js'
 import { verifyAdmin } from './lib/auth.js'
-import { generateEssay, DEFAULT_TEMPLATE } from './lib/ai.js'
+import { generateEssay } from './lib/ai.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -68,19 +68,41 @@ async function handleListOrders(password) {
 
 async function handleConfirmPayment(password, orderId) {
   mustAuth(password)
-  const { error } = await supabaseAdmin
+
+  // 1. 更新状态为 writing
+  const { error: updateError } = await supabaseAdmin
     .from('orders')
     .update({ status: 'writing' })
     .eq('id', orderId)
     .eq('status', 'paid')
 
-  if (error) throw new Error('确认失败')
-  return { success: true }
+  if (updateError) throw new Error('确认失败')
+
+  // 2. 自动触发AI生成
+  try {
+    const { data: order } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single()
+
+    if (order) {
+      const content = await generateEssay(order)
+      await supabaseAdmin
+        .from('orders')
+        .update({ ai_content: content })
+        .eq('id', orderId)
+    }
+  } catch (genErr) {
+    console.error('AI auto-generate error:', genErr)
+    // 即使生成失败也返回成功，管理员可手动重试
+  }
+
+  return { success: true, auto_generated: true }
 }
 
 async function handleGenerate(password, orderId) {
   mustAuth(password)
-  // 获取订单信息
   const { data: order } = await supabaseAdmin
     .from('orders')
     .select('*')
@@ -89,20 +111,9 @@ async function handleGenerate(password, orderId) {
 
   if (!order) throw new Error('订单不存在')
 
-  // 获取AI模板
-  const { data: configRow } = await supabaseAdmin
-    .from('config')
-    .select('value')
-    .eq('key', 'ai_templates')
-    .single()
+  // 直接调用 generateEssay，模板由 ai.js 内部选择
+  const content = await generateEssay(order)
 
-  const templates = configRow?.value || [DEFAULT_TEMPLATE]
-  const template = templates[Math.floor(Math.random() * templates.length)]
-
-  // 调用AI生成
-  const content = await generateEssay(order, typeof template === 'string' ? template : DEFAULT_TEMPLATE)
-
-  // 保存生成结果
   const { error } = await supabaseAdmin
     .from('orders')
     .update({ ai_content: content })

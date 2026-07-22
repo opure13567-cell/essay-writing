@@ -63,11 +63,26 @@ export default function OrderDetail() {
         )}
       </div>
 
-      {/* 作业要求 */}
+      {/* 作业信息 */}
       <div>
-        <h3 className="font-medium text-gray-700 mb-2">作业要求</h3>
-        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600 whitespace-pre-wrap">
-          {order.description}
+        <h3 className="font-medium text-gray-700 mb-2">作业信息</h3>
+        <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
+          {(() => {
+            try {
+              const qData = JSON.parse(order.description)
+              if (qData.personal_info) {
+                return (
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between"><span className="text-gray-400">姓名</span><span>{qData.personal_info.name}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">学校</span><span>{qData.personal_info.school}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">学号</span><span>{qData.personal_info.student_id}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-400">作业类型</span><span>我的家风家训</span></div>
+                  </div>
+                )
+              }
+            } catch {}
+            return <div className="whitespace-pre-wrap">{order.description}</div>
+          })()}
         </div>
       </div>
 

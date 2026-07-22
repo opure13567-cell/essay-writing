@@ -1,6 +1,5 @@
 // api/orders.js
 import { supabaseAdmin } from './lib/supabase.js'
-import { countWords, calculatePrice } from './lib/pricing.js'
 
 export default async function handler(req, res) {
   // 设置CORS
@@ -48,23 +47,8 @@ async function createOrder(req, res, userToken) {
     return res.status(400).json({ error: '请填写作业要求' })
   }
 
-  const wordCount = countWords(description)
-
-  // 获取定价规则
-  const { data: configRow } = await supabaseAdmin
-    .from('config')
-    .select('value')
-    .eq('key', 'pricing_rules')
-    .single()
-
-  const pricingRules = configRow?.value || null
-  let price = calculatePrice(wordCount, pricingRules)
-
-  // 封顶30元
-  if (price > 30) price = 30
-
-  // 加急 x1.5
-  if (isRush) price = Math.min(Math.round(price * 1.5), 30)
+  // 统一定价 ¥5
+  const price = 5
 
   const { data, error } = await supabaseAdmin
     .from('orders')

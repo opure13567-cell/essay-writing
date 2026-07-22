@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../utils/api'
-import PriceTag from '../components/PriceTag'
 import StatusBadge from '../components/StatusBadge'
 
 export default function PayOrder() {
@@ -66,7 +65,10 @@ export default function PayOrder() {
       <h2 className="text-lg font-bold text-gray-800">确认付款</h2>
 
       {/* 价格展示 */}
-      <PriceTag price={order.price} isRush={order.is_rush} />
+      <div className="bg-blue-50 rounded-lg p-4 text-center">
+        <div className="text-3xl font-bold text-blue-600">¥5</div>
+        <div className="text-xs text-blue-500 mt-1">统一定价 · 含AI智能生成</div>
+      </div>
 
       {/* 订单信息 */}
       <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-1">
@@ -88,7 +90,7 @@ export default function PayOrder() {
       {order.status === 'pending_pay' ? (
         <>
           <div className="bg-blue-50 rounded-lg p-4 text-center space-y-3">
-            <p className="font-medium text-blue-800">请扫码付款 ¥{order.price}</p>
+            <p className="font-medium text-blue-800">请扫码付款 ¥5</p>
             <div className="bg-white rounded-lg p-4 inline-block">
               <img
                 src="https://bxipdwwzkgpajcmmmulq.supabase.co/storage/v1/object/public/uploads/wixinshoukuanma.jpg"
