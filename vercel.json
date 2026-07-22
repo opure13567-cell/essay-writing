@@ -3,6 +3,10 @@
     {
       "source": "/api/orders/:path*",
       "destination": "/api/orders"
+    },
+    {
+      "source": "/api/admin/:path*",
+      "destination": "/api/admin"
     }
   ]
 }
