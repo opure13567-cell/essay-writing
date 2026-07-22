@@ -90,11 +90,11 @@ export default function PayOrder() {
           <div className="bg-blue-50 rounded-lg p-4 text-center space-y-3">
             <p className="font-medium text-blue-800">请扫码付款 ¥{order.price}</p>
             <div className="bg-white rounded-lg p-4 inline-block">
-              <div className="w-48 h-48 bg-gray-100 rounded flex items-center justify-center text-gray-400 text-sm">
-                收款码图片
-                <br />
-                （请在后台配置中上传）
-              </div>
+              <img
+                src="https://bxipdwwzkgpajcmmmulq.supabase.co/storage/v1/object/public/uploads/wixinshoukuanma.jpg"
+                alt="微信收款码"
+                className="w-48 h-48 object-contain rounded"
+              />
             </div>
             <p className="text-xs text-blue-600">长按保存收款码 → 打开微信/支付宝扫码付款</p>
           </div>
