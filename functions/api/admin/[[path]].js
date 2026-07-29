@@ -39,9 +39,11 @@ export async function onRequest(context) {
       case '/orders':
         return json(await handleListOrders(supabaseAdmin, password, adminPassword))
       case '/confirm-payment':
-        return json(await handleConfirmPayment(supabaseAdmin, password, adminPassword, rest.orderId, deepseekApiKey))
+        return json(await handleConfirmPayment(context, supabaseAdmin, password, adminPassword, rest.orderId, deepseekApiKey))
       case '/generate':
-        return json(await handleGenerate(supabaseAdmin, password, adminPassword, rest.orderId, deepseekApiKey))
+        return json(await handleGenerate(context, supabaseAdmin, password, adminPassword, rest.orderId, deepseekApiKey))
+      case '/get-deepseek-key':
+        return json(await handleGetDeepseekKey(password, adminPassword, deepseekApiKey, supabaseAdmin, rest.orderId))
       case '/edit-content':
         return json(await handleEditContent(supabaseAdmin, password, adminPassword, rest.orderId, rest.content))
       case '/complete':
@@ -50,6 +52,12 @@ export async function onRequest(context) {
         return json(await handleGetConfig(supabaseAdmin, password, adminPassword))
       case '/config/update':
         return json(await handleUpdateConfig(supabaseAdmin, password, adminPassword, rest.config))
+      case '/order':
+        return json(await handleGetOrderContent(supabaseAdmin, password, adminPassword, rest.orderId))
+      case '/generate-proxy':
+        return json(await handleGenerateProxy(password, adminPassword, deepseekApiKey, rest.prompt))
+      case '/upload-file':
+        return await handleUploadFile(request, supabaseAdmin, env, password, adminPassword)
       default:
         return json({ error: '接口不存在' }, 404)
     }
@@ -70,17 +78,45 @@ async function handleAuth(password, adminPassword) {
   return { success: true, token: password }
 }
 
+async function handleUploadFile(request, supabaseAdmin, env, password, adminPassword) {
+  mustAuth(password, adminPassword)
+  try {
+    const formData = await request.formData()
+    const file = formData.get('file')
+    const orderId = formData.get('orderId')
+    if (!file || !orderId) return json({ error: '缺少文件或订单ID' }, 400)
+
+    const bytes = await file.arrayBuffer()
+    const fileName = `modified_${orderId}_${Date.now()}.docx`
+
+    const { data, error } = await supabaseAdmin.storage
+      .from('uploads')
+      .upload(fileName, bytes, { contentType: file.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', upsert: true })
+
+    if (error) throw new Error('上传失败: ' + error.message)
+
+    const fileUrl = `${env.VITE_SUPABASE_URL}/storage/v1/object/public/uploads/${fileName}`
+
+    await supabaseAdmin.from('orders').update({ plagiarism_report: fileUrl }).eq('id', orderId)
+
+    return json({ url: fileUrl })
+  } catch (err) {
+    return json({ error: err.message }, 500)
+  }
+}
+
 async function handleListOrders(supabaseAdmin, password, adminPassword) {
   mustAuth(password, adminPassword)
+  // 列表返回带内容标记，用于判断是否可发稿
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select('*')
+    .select('id, user_token, type, description, word_count, price, status, created_at, deadline, is_rush, payment_screenshot, plagiarism_report, ai_content, edited_content')
     .order('created_at', { ascending: false })
   if (error) throw new Error('查询失败')
   return data
 }
 
-async function handleConfirmPayment(supabaseAdmin, password, adminPassword, orderId, deepseekApiKey) {
+async function handleConfirmPayment(context, supabaseAdmin, password, adminPassword, orderId, deepseekApiKey) {
   mustAuth(password, adminPassword)
 
   const { error: updateError } = await supabaseAdmin
@@ -91,29 +127,31 @@ async function handleConfirmPayment(supabaseAdmin, password, adminPassword, orde
 
   if (updateError) throw new Error('确认失败')
 
-  // 自动触发AI生成
-  try {
-    const { data: order } = await supabaseAdmin
-      .from('orders')
-      .select('*')
-      .eq('id', orderId)
-      .single()
-
-    if (order && deepseekApiKey) {
-      const content = await generateEssay(order, deepseekApiKey)
-      await supabaseAdmin
+  // 异步触发AI生成（不阻塞返回，使用waitUntil让后台继续运行）
+  context.waitUntil((async () => {
+    try {
+      const { data: order } = await supabaseAdmin
         .from('orders')
-        .update({ ai_content: content })
+        .select('*')
         .eq('id', orderId)
+        .single()
+
+      if (order && deepseekApiKey) {
+        const content = await generateEssay(order, deepseekApiKey)
+        await supabaseAdmin
+          .from('orders')
+          .update({ ai_content: content })
+          .eq('id', orderId)
+      }
+    } catch (genErr) {
+      console.error('AI auto-generate error:', genErr)
     }
-  } catch (genErr) {
-    console.error('AI auto-generate error:', genErr)
-  }
+  })())
 
   return { success: true, auto_generated: true }
 }
 
-async function handleGenerate(supabaseAdmin, password, adminPassword, orderId, deepseekApiKey) {
+async function handleGenerate(context, supabaseAdmin, password, adminPassword, orderId, deepseekApiKey) {
   mustAuth(password, adminPassword)
 
   const { data: order } = await supabaseAdmin
@@ -125,15 +163,51 @@ async function handleGenerate(supabaseAdmin, password, adminPassword, orderId, d
   if (!order) throw new Error('订单不存在')
   if (!deepseekApiKey) throw new Error('DeepSeek API密钥未配置')
 
-  const content = await generateEssay(order, deepseekApiKey)
+  // 立即返回，后台异步生成
+  context.waitUntil((async () => {
+    try {
+      const content = await generateEssay(order, deepseekApiKey)
+      await supabaseAdmin
+        .from('orders')
+        .update({ ai_content: content })
+        .eq('id', orderId)
+    } catch (genErr) {
+      console.error('AI generate error:', genErr)
+    }
+  })())
 
-  const { error } = await supabaseAdmin
+  return { message: 'AI生成已启动，稍后刷新查看结果' }
+}
+
+
+async function handleGenerateProxy(password, adminPassword, deepseekApiKey, prompt) {
+  mustAuth(password, adminPassword)
+  if (!deepseekApiKey) throw new Error('API密钥未配置')
+
+  const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deepseekApiKey}` },
+    body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 12000, temperature: 0.9, messages: [{ role: 'user', content: prompt }] }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`DeepSeek失败: ${res.status}`)
+  }
+  const data = await res.json()
+  return { content: data.choices[0]?.message?.content || '' }
+}
+
+async function handleGetDeepseekKey(password, adminPassword, deepseekApiKey, supabaseAdmin, orderId) {
+  mustAuth(password, adminPassword)
+  if (!deepseekApiKey) throw new Error('DeepSeek API密钥未配置')
+  const { data: order } = await supabaseAdmin
     .from('orders')
-    .update({ ai_content: content })
+    .select('*')
     .eq('id', orderId)
-
-  if (error) throw new Error('保存失败')
-  return { content }
+    .single()
+  if (!order) throw new Error('订单不存在')
+  return { apiKey: deepseekApiKey, order }
 }
 
 async function handleEditContent(supabaseAdmin, password, adminPassword, orderId, content) {
@@ -150,12 +224,16 @@ async function handleComplete(supabaseAdmin, password, adminPassword, orderId) {
   mustAuth(password, adminPassword)
   const { data: order } = await supabaseAdmin
     .from('orders')
-    .select('edited_content, ai_content')
+    .select('edited_content, ai_content, plagiarism_report')
     .eq('id', orderId)
     .single()
 
+  const hasUpload = order?.plagiarism_report && order.plagiarism_report.trim() !== ''
   const finalContent = order?.edited_content || order?.ai_content || ''
-  if (!finalContent.trim()) throw new Error('请先生成内容再发稿')
+
+  if (!finalContent.trim() && !hasUpload) {
+    throw new Error('请先生成内容或上传修改稿再发稿')
+  }
 
   const { error } = await supabaseAdmin
     .from('orders')
@@ -164,6 +242,17 @@ async function handleComplete(supabaseAdmin, password, adminPassword, orderId) {
 
   if (error) throw new Error('发稿失败')
   return { success: true }
+}
+
+async function handleGetOrderContent(supabaseAdmin, password, adminPassword, orderId) {
+  mustAuth(password, adminPassword)
+  const { data, error } = await supabaseAdmin
+    .from('orders')
+    .select('ai_content, edited_content')
+    .eq('id', orderId)
+    .single()
+  if (error || !data) throw new Error('订单不存在')
+  return { ai_content: data.ai_content, edited_content: data.edited_content }
 }
 
 async function handleGetConfig(supabaseAdmin, password, adminPassword) {
@@ -217,7 +306,7 @@ ${order.description}`
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
-      max_tokens: 10000,
+      max_tokens: 6000,
       temperature: 0.9,
       messages: [{ role: 'user', content: prompt }],
     }),

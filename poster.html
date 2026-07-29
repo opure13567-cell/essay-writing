@@ -3,21 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>海报预览 - 形势与政策写作助手</title>
+<title>海报预览 - 形势与政策论文助手</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     display: flex;
     justify-content: center;
-    align-items: flex-start;
     padding: 20px;
     background: #e8ecf1;
     font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
   }
   .poster {
     width: 375px;
-    min-height: 667px;
-    background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 30%, #ffffff 100%);
+    background: linear-gradient(180deg, #f0f7ff 0%, #ffffff 25%, #ffffff 100%);
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
@@ -27,174 +25,129 @@
     color: #fff;
     text-align: center;
     padding: 10px 16px;
-    font-size: 13px;
+    font-size: 12px;
     letter-spacing: 1px;
   }
-  .hero {
-    padding: 20px 20px 12px;
-    text-align: center;
-  }
-  .hero h1 {
-    font-size: 22px;
-    font-weight: 800;
-    color: #111827;
-    line-height: 1.4;
-  }
-  .hero h1 .highlight { color: #1a56db; }
-  .hero .sub { font-size: 12px; color: #6b7280; margin-top: 4px; }
-  .hero .speed {
-    display: inline-block;
-    margin-top: 8px;
-    background: #fef2f2;
-    color: #dc2626;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 4px 12px;
-    border-radius: 20px;
+  .hero { padding: 16px 20px 10px; text-align: center; }
+  .hero h1 { font-size: 20px; font-weight: 800; color: #111827; line-height: 1.4; }
+  .hero h1 .hl { color: #1a56db; }
+  .hero .sub { font-size: 11px; color: #6b7280; margin-top: 4px; }
+  .hero .badge {
+    display: inline-block; margin-top: 6px;
+    background: #fef2f2; color: #dc2626;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 12px; border-radius: 20px;
   }
 
-  .steps {
-    padding: 0 20px 12px;
+  .types { padding: 0 16px 8px; display: flex; flex-direction: column; gap: 6px; }
+  .type-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; background: #fff;
+    border-radius: 10px; border: 1.5px solid #e5e7eb;
   }
-  .step {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    margin-bottom: 6px;
-    background: #fff;
-    border-radius: 12px;
-    border: 1.5px solid #e5e7eb;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-  }
-  .step-num {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    font-size: 14px;
-    flex-shrink: 0;
-  }
-  .step:nth-child(1) .step-num { background: #dbeafe; color: #1d4ed8; }
-  .step:nth-child(2) .step-num { background: #fef3c7; color: #b45309; }
-  .step:nth-child(3) .step-num { background: #d1fae5; color: #047857; }
-  .step:nth-child(4) .step-num { background: #ede9fe; color: #6d28d9; }
-  .step-info { flex: 1; }
-  .step-title { font-size: 13px; font-weight: 600; color: #111827; }
-  .step-desc  { font-size: 11px; color: #6b7280; margin-top: 1px; }
+  .type-icon { font-size: 24px; flex-shrink: 0; }
+  .type-info { flex: 1; }
+  .type-name { font-size: 13px; font-weight: 600; color: #111827; }
+  .type-sub  { font-size: 10px; color: #6b7280; }
 
-  .trust {
-    padding: 0 20px 10px;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
+  .steps { padding: 0 16px 8px; display: flex; gap: 8px; }
+  .step-item {
+    flex: 1; text-align: center; padding: 10px 4px;
+    background: #f9fafb; border-radius: 10px;
   }
-  .tag {
-    font-size: 10px;
-    color: #374151;
-    background: #f3f4f6;
-    padding: 4px 8px;
-    border-radius: 20px;
-    white-space: nowrap;
-  }
+  .step-num { font-size: 18px; font-weight: 700; color: #1a56db; }
+  .step-label { font-size: 10px; color: #6b7280; margin-top: 2px; }
 
-  .cta {
-    padding: 0 20px 16px;
-    text-align: center;
-  }
-  .qr-box {
-    display: inline-block;
-    background: #fff;
-    padding: 10px;
-    border-radius: 16px;
-    border: 2px dashed #cbd5e1;
-  }
-  .qr-box img {
-    width: 140px;
-    height: 140px;
-    display: block;
-  }
-  .qr-label {
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 6px;
-  }
-  .slow-note {
-    font-size: 10px;
-    color: #9ca3af;
-    margin-top: 6px;
-  }
-
-  .footer {
-    text-align: center;
-    padding: 10px 20px 14px;
-    font-size: 11px;
-    color: #9ca3af;
+  .privacy {
+    margin: 0 16px 8px; padding: 10px 12px;
+    background: #f0fdf4; border-radius: 10px;
+    border: 1px solid #bbf7d0;
+    text-align: center; font-size: 10px; color: #166534;
     line-height: 1.6;
   }
-  .footer .contact {
-    color: #6b7280;
-    font-weight: 500;
-  }
+  .privacy strong { color: #15803d; }
+
+  .cta { padding: 0 16px 8px; text-align: center; }
+  .qr-box { display: inline-block; background: #fff; padding: 8px; border-radius: 14px; border: 2px dashed #cbd5e1; }
+  .qr-box img { width: 120px; height: 120px; display: block; }
+  .qr-label { font-size: 11px; color: #6b7280; margin-top: 4px; }
+
+  .footer { text-align: center; padding: 8px 20px 12px; font-size: 10px; color: #9ca3af; line-height: 1.6; }
+  .footer .contact { color: #6b7280; font-weight: 500; }
 </style>
 </head>
 <body>
 
 <div class="poster">
 
-  <div class="top-bar">📋 形势与政策 · 暑假作业</div>
+  <div class="top-bar">📋 2023级—2025级 · 形势与政策暑假作业</div>
 
   <div class="hero">
-    <h1>5000字<span class="highlight">家风报告</span><br>选择题答完就<span class="highlight">生成Word</span></h1>
-    <div class="sub">没有AI味 · 自动排好版 · 学号命名即用</div>
-    <div class="speed">⚡ 付完款10分钟即可获得</div>
+    <h1>AI论文助手<br><span class="hl">选择题答完 → 自动生成Word</span></h1>
+    <div class="sub">没有AI味 · 自动排版 · 学号命名即用</div>
+    <div class="badge">⚡ 付完款10分钟内出稿</div>
   </div>
 
+  <!-- 三选一作业类型 -->
+  <div class="types">
+    <div class="type-card">
+      <span class="type-icon">🏠</span>
+      <div class="type-info">
+        <div class="type-name">我的家风家训</div>
+        <div class="type-sub">2025·2024级 / 社会调查报告 / 约5000字</div>
+      </div>
+    </div>
+    <div class="type-card">
+      <span class="type-icon">🏙️</span>
+      <div class="type-info">
+        <div class="type-name">从家乡变迁看制度优势</div>
+        <div class="type-sub">2025·2024级 / 备选题目 / 约5000字</div>
+      </div>
+    </div>
+    <div class="type-card">
+      <span class="type-icon">👔</span>
+      <div class="type-info">
+        <div class="type-name">行业人物访谈报告</div>
+        <div class="type-sub">2023级 / 深度访谈 / 约5000-10000字</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 三步流程 -->
   <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div class="step-info">
-        <div class="step-title">📱 扫码 · 选择题作答</div>
-        <div class="step-desc">填个人信息 + 选家风素材，每题都有选项</div>
-      </div>
+    <div class="step-item">
+      <div class="step-num">📱</div>
+      <div class="step-label">扫码选择题作答</div>
     </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div class="step-info">
-        <div class="step-title">💰 付5元 · AI自动生成</div>
-        <div class="step-desc">根据你的答案定制生成，不是套模板</div>
-      </div>
+    <div class="step-item">
+      <div class="step-num">💰</div>
+      <div class="step-label">付5元AI生成</div>
     </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div class="step-info">
-        <div class="step-title">📥 下载Word · 直接提交</div>
-        <div class="step-desc">宋体/行距/页边距全自动，文件名=学号+姓名</div>
-      </div>
+    <div class="step-item">
+      <div class="step-num">📥</div>
+      <div class="step-label">下载Word提交</div>
     </div>
   </div>
 
-  <div class="trust">
-    <span class="tag">✅ 无AI味</span>
-    <span class="tag">📄 直出Word</span>
-    <span class="tag">🎓 真人笔触</span>
-    <span class="tag">💰 仅5元</span>
+  <!-- 隐私声明 -->
+  <div class="privacy">
+    🔒 <strong>隐私承诺</strong><br>
+    充分尊重用户隐私，所有获取信息仅用于约定写作服务<br>
+    如有泄露，依法承担赔偿责任<br>
+    适用于 2023级—2025级 全体学生
   </div>
 
+  <!-- 二维码 -->
   <div class="cta">
     <div class="qr-box">
       <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://essay-writing-ehl.pages.dev" alt="扫码使用">
     </div>
     <div class="qr-label">📷 微信扫码，马上搞定</div>
-    <div class="slow-note">💡 网页打开有点慢，静静等待一会就好~</div>
   </div>
 
   <div class="footer">
-    形势与政策 · 我的家风家训 · 社会调查报告<br>
-    <span class="contact">🛠 售后请联系：opure0901（微信）</span>
+    形势与政策 · 家风家训 / 家乡变迁 / 人物访谈<br>
+    <span class="contact">🛠 售后联系：opure0901（微信）</span>
   </div>
 
 </div>

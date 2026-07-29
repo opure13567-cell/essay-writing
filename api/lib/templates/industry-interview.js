@@ -18,8 +18,8 @@ export function buildPrompt(data) {
     balanced: '专业分析与故事叙述相结合',
   }
 
-  const industry = personal_info.industry || answers.industry || '目标行业'
-  const title = personal_info.title || `${industry}领域从业人物访谈报告`
+  const industry = personal_info.industry || '目标行业'
+  const title = personal_info.title || 'AI自动生成标题'
 
   return `你是一名大学本科生（2023级），正在完成"形势与政策"课程的暑假作业。请根据以下信息，撰写一篇《行业人物访谈报告》。
 
@@ -40,7 +40,14 @@ export function buildPrompt(data) {
 ## 报告要求
 
 ### 格式规范
-- 报告标题：${title}（宋体三号加粗，居中）
+### 重要：标题必须AI自创
+- 不要使用"${title}"这个标题！
+- 根据访谈的具体内容（行业、感悟、故事），自创一个独一无二的标题
+- 标题风格参考：用行业术语、提炼访谈金句、对比理想与现实、带副标题
+- 例如："在代码里写诗——三位软件工程师访谈录""三尺讲台之外——教育工作者的故事""金融不只是数字——银行业从业者访谈报告"
+- 保证每次生成的标题都不一样
+
+- 报告标题：AI自创（宋体三号加粗，居中）
 - 个人信息行：姓名、学院、专业、年级、班级、学号（宋体小四号，居中）
 - 摘要+关键词：楷体小四号，约200字摘要，3-5个关键词
 - 正文：宋体四号，固定行距25磅，页边距上下左右2.5cm

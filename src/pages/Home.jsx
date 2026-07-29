@@ -68,7 +68,7 @@ export default function Home() {
     <div className="space-y-6">
       <div className="text-center py-6">
         <div className="text-5xl mb-4">✍️</div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">形势与政策写作助手</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">形势与政策 · 论文助手</h1>
         <p className="text-gray-500 text-sm">
           选择题式作答 · AI智能生成 · 5元/篇
         </p>

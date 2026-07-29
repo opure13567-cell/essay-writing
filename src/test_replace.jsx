@@ -99,50 +99,38 @@ export default function Admin() {
     }
   }
 
-      const handleGenerate = async (orderId) => {
+  const handleGenerate = async (orderId) => {
     setGenerating(prev => ({ ...prev, [orderId]: true }))
     try {
-      // 通过服务端代理调用 DeepSeek（避免微信浏览器跨域问题）
-      const order = orders.find(o => o.id === orderId)
-      const desc = order?.description || ''
-      const wordCount = order?.word_count || 5000
-      const label = order?.type === 'family_tradition' ? '我的家风家训调查报告' : '文章'
+      // 获取 API key
+      const keyRes = await api.adminGetDeepseekKey(password, orderId)
+      const order = keyRes.order
 
-      const TITLES = ['守得云开见月明——我的家风家训调查报告','一粥一饭当思来处——记我家的勤俭之风','父亲的工具箱里装着什么——我的家风调查报告','那些年，母亲教我的事——我的家风家训','田埂上的家风——一个普通家庭的传承故事','一盏灯，三代人——我的家风家训调查报告','诚实做人，踏实做事——我的家风家训','把根留住——我的家风家训调查报告','老屋里的家风——我的家风家训','从一块奖章说起——我的家风家训调查报告','家风如雨，润物无声——我的家风家训','一把锄头传三代——我的家风调查报告','饭桌上的规矩——我的家风家训','那些刻在骨子里的话——我的家风家训调查报告','平凡人家的传家宝——我的家风家训']
-      const myTitle = TITLES[Math.floor(Math.random() * TITLES.length)]
+      // 调用 DeepSeek
+      const prompt = `REPLACED`
 
-      const prompt = `你是一名大学本科生。请根据以下素材写一篇《我的家风家训》社会调查报告，字数约${wordCount}字。
 
-标题：${myTitle}（第一行就是标题）
+      const res = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${keyRes.apiKey}` },
+        body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 8000, temperature: 0.85, messages: [{ role: 'user', content: prompt }] }),
+      })
 
-结构：标题 → 摘要+关键词 → 正文（4-6章）→ 附录（访谈提纲）
+      if (!res.ok) throw new Error(`DeepSeek失败: ${res.status}`)
+      const data = await res.json()
+      const content = data.choices[0]?.message?.content || ''
 
-写作要求：
-1. 第一人称"我"，口语化
-2. 禁止：首先其次最后、综上所述、值得注意的是、不可否认、随着...的发展、说实话
-3. 家训概括成八个字
-4. 引用家人话用大白话
-5. 结尾不要加任何说明文字
-6. 不要出现具体人名、年龄、年级、学校名、地名
-
-素材：
-${desc}`
-
-      const result = await api.adminGenerateProxy(password, prompt)
-      if (result.content) {
-        await api.adminEditContent(password, orderId, result.content)
-        setEditContent(prev => ({ ...prev, [orderId]: result.content }))
-        loadOrders()
-      } else {
-        alert('生成内容为空')
-      }
+      // 保存
+      await api.adminEditContent(password, orderId, content)
+      setEditContent(prev => ({ ...prev, [orderId]: content }))
+      loadOrders()
     } catch (err) {
       alert('AI生成失败: ' + err.message)
     }
     setGenerating(prev => ({ ...prev, [orderId]: false }))
   }
 
-const handleComplete = async (orderId) => {
+  const handleComplete = async (orderId) => {
     const content = editContent[orderId]
     if (content) {
       try {
@@ -304,57 +292,48 @@ const handleComplete = async (orderId) => {
 
               {/* 下载/上传/发稿 */}
               {(order.ai_content || order.edited_content) && order.status !== 'done' && (
-                <div className="space-y-2">
-                  <div className="flex gap-2 flex-wrap">
-                    <button onClick={() => downloadDocx(order)} className="px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg hover:bg-green-200">
-                      📥 下载Word
-                    </button>
-                    {order.plagiarism_report ? (
-                      <span className="px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg inline-flex items-center gap-1">
-                        ✅ 文件已上传
-                        <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="underline ml-1">查看</a>
-                      </span>
-                    ) : (
-                      <label className="px-3 py-2 bg-yellow-100 text-yellow-700 text-sm rounded-lg hover:bg-yellow-200 cursor-pointer">
-                        📤 上传修改稿
-                        <input type="file" accept=".docx,.doc" className="hidden" onChange={async (e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          const result = await api.adminUploadFile(password, order.id, file)
-                          if (result.url) {
-                            loadOrders()
-                          } else {
-                            alert('上传失败: ' + (result.error || '未知错误'))
-                          }
-                          e.target.value = ''
-                        }} />
-                      </label>
-                    )}
-                    <button onClick={() => handleComplete(order.id)} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-                      📤 发稿
-                    </button>
-                  </div>
-                </div>
+                <>
+                  <button onClick={() => downloadDocx(order)} className="px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg hover:bg-green-200">
+                    📥 下载Word
+                  </button>
+                  <label className="px-3 py-2 bg-yellow-100 text-yellow-700 text-sm rounded-lg hover:bg-yellow-200 cursor-pointer">
+                    📤 上传修改稿
+                    <input type="file" accept=".docx,.doc" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const result = await api.adminUploadFile(password, order.id, file)
+                      if (result.url) {
+                        alert('上传成功！顾客即可下载修改后的文件')
+                        loadOrders()
+                      } else {
+                        alert('上传失败: ' + (result.error || '未知错误'))
+                      }
+                      e.target.value = ''
+                    }} />
+                  </label>
+                  <button onClick={() => handleComplete(order.id)} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                    📤 发稿
+                  </button>
+                </>
               )}
 
               {order.status === 'done' && (
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-green-600">✅ 已发稿</span>
-                  {order.plagiarism_report ? (
+                  <button onClick={() => downloadDocx(order)} className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200">
+                    📥 下载Word
+                  </button>
+                  {order.plagiarism_report && (
                     <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-lg hover:bg-green-200">
                       📄 查看修改稿
                     </a>
-                  ) : (
-                    <button onClick={() => downloadDocx(order)} className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200">
-                      📥 下载Word
-                    </button>
                   )}
                 </div>
               )}
             </div>
 
-            {/* AI生成内容编辑区 — 仅在上传修改稿前显示 */}
-            {!order.plagiarism_report && (order.ai_content || order.edited_content || editContent[order.id]) && order.status !== 'done' && (
+            {/* AI生成内容编辑区 */}
+            {(order.ai_content || order.edited_content || editContent[order.id]) && order.status !== 'done' && (
               <div>
                 <textarea
                   value={editContent[order.id] ?? order.edited_content ?? order.ai_content}
@@ -366,13 +345,24 @@ const handleComplete = async (orderId) => {
               </div>
             )}
 
-            {/* 已发稿 — 有修改稿则显示链接 */}
-            {order.status === 'done' && order.plagiarism_report && (
-              <div className="bg-green-50 rounded p-3 mt-2 text-sm">
-                <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="text-blue-600 underline">
-                  📄 查看修改稿
-                </a>
-              </div>
+            {/* 最终内容预览（已发稿的） */}
+            {order.status === 'done' && (
+              <details className="text-xs">
+                <summary className="text-gray-500 cursor-pointer">
+                  {order.plagiarism_report ? '查看修改稿' : '查看最终内容'}
+                </summary>
+                {order.plagiarism_report ? (
+                  <div className="bg-green-50 rounded p-3 mt-2">
+                    <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="text-blue-600 underline text-sm">
+                      📄 点此下载修改后的Word文件
+                    </a>
+                  </div>
+                ) : order.edited_content ? (
+                  <div className="bg-green-50 rounded p-3 mt-2 whitespace-pre-wrap text-gray-700">
+                    {order.edited_content}
+                  </div>
+                ) : null}
+              </details>
             )}
           </div>
         ))}

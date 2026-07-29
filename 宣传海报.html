@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>宣传海报</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #f0f2f5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      padding: 20px;
+    }
+
+    .poster {
+      width: 600px;
+      background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 顶部装饰条 */
+    .top-bar {
+      height: 8px;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7);
+    }
+
+    /* 头部 */
+    .header {
+      padding: 40px 40px 0;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .header h1 .tag {
+      font-size: 13px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    .header .subtitle {
+      margin-top: 8px;
+      font-size: 15px;
+      color: #64748b;
+      line-height: 1.6;
+    }
+
+    .header .divider {
+      margin: 20px auto 0;
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, #6366f1, #a855f7);
+      border-radius: 2px;
+    }
+
+    /* 技能标签 */
+    .skills {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px 40px 0;
+      flex-wrap: wrap;
+    }
+
+    .skills span {
+      font-size: 13px;
+      padding: 5px 16px;
+      border-radius: 20px;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-weight: 500;
+      border: 1px solid #e0e7ff;
+    }
+
+    /* 服务列表 */
+    .services {
+      padding: 24px 40px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .service-item {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+      transition: all 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .service-item .emoji {
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+
+    .service-item .name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .service-item .price {
+      margin-top: 4px;
+      font-size: 13px;
+      color: #6366f1;
+      font-weight: 700;
+    }
+
+    .service-item .price span {
+      font-size: 18px;
+    }
+
+    /* 为什么便宜 + 找我理由 合并 */
+    .reasons {
+      padding: 0 40px;
+    }
+
+    .reasons-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .reason-card {
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .reason-card.green {
+      background: #f0fdf4;
+      color: #166534;
+    }
+
+    .reason-card.blue {
+      background: #eff6ff;
+      color: #1e40af;
+    }
+
+    .reason-card.purple {
+      background: #f5f3ff;
+      color: #5b21b6;
+    }
+
+    .reason-card.amber {
+      background: #fffbeb;
+      color: #92400e;
+    }
+
+    .reason-card strong {
+      font-size: 14px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    /* 作品展示区 */
+    .works {
+      padding: 24px 40px 0;
+    }
+
+    .works-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e293b;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .works-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .work-placeholder {
+      aspect-ratio: 16/10;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 13px;
+      gap: 6px;
+      background: #f8fafc;
+    }
+
+    .work-placeholder .icon {
+      font-size: 28px;
+    }
+
+    .work-placeholder .tip {
+      font-size: 11px;
+      color: #b0b9c5;
+    }
+
+    /* 二维码 + 联系 */
+    .footer {
+      padding: 24px 40px 36px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .qrcode-placeholder {
+      width: 100px;
+      height: 100px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 11px;
+      gap: 4px;
+      flex-shrink: 0;
+      background: #f8fafc;
+    }
+
+    .qrcode-placeholder .icon {
+      font-size: 28px;
+    }
+
+    .contact {
+      flex: 1;
+    }
+
+    .contact .cta {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .contact .cta span {
+      color: #6366f1;
+    }
+
+    .contact .hint {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    .contact .hint strong {
+      color: #64748b;
+    }
+
+    /* 底部 */
+    .bottom-bar {
+      height: 6px;
+      background: linear-gradient(90deg, #a855f7, #6366f1, #8b5cf6);
+    }
+
+    /* 响应式 */
+    @media (max-width: 640px) {
+      .poster { width: 100%; }
+      .services { grid-template-columns: 1fr; padding: 20px; }
+      .reasons-grid { grid-template-columns: 1fr; }
+      .works-grid { grid-template-columns: 1fr; }
+      .footer { flex-direction: column; text-align: center; padding: 20px; }
+    }
+
+    /* 打印样式 - 去掉背景改为纯白方便打印 */
+    @media print {
+      body { background: white; padding: 0; }
+      .poster { box-shadow: none; border: 1px solid #e2e8f0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="poster">
+  <div class="top-bar"></div>
+
+  <!-- 头部 -->
+  <div class="header">
+    <h1>
+      💻 极速建站 · 设计
+      <span class="tag">学生价</span>
+    </h1>
+    <p class="subtitle">
+      计算机专业大学生 · AI 辅助极速出活 · 审美在线
+    </p>
+    <div class="divider"></div>
+  </div>
+
+  <!-- 技能标签 -->
+  <div class="skills">
+    <span>🌐 网站开发</span>
+    <span>📱 小程序</span>
+    <span>🎨 海报设计</span>
+    <span>🤖 AI 效率</span>
+  </div>
+
+  <!-- 服务项目 -->
+  <div class="services">
+    <div class="service-item">
+      <div class="emoji">🖥️</div>
+      <div class="name">个人网站</div>
+      <div class="price"><span>¥19.9</span> 起</div>
+    </div>
+    <div class="service-item">
+      <div class="emoji">📄</div>
+      <div class="name">海报 / 宣传图</div>
+      <div class="price"><span>¥9.9</span> 起</div>
+    </div>
+    <div class="service-item">
+      <div class="emoji">📱</div>
+      <div class="name">简单小程序</div>
+      <div class="price"><span>¥49.9</span> 起</div>
+    </div>
+    <div class="service-item">
+      <div class="emoji">💬</div>
+      <div class="name">其他需求</div>
+      <div class="price" style="color:#64748b;">聊了算</div>
+    </div>
+  </div>
+
+  <!-- 选择我的理由 -->
+  <div class="reasons">
+    <div class="reasons-grid">
+      <div class="reason-card green">
+        <strong>💰 白菜价</strong>
+        比专业公司便宜 10 倍+<br>就图一杯奶茶钱
+      </div>
+      <div class="reason-card blue">
+        <strong>⚡ 极速交付</strong>
+        AI 辅助效率拉满<br>最快 24 小时出活
+      </div>
+      <div class="reason-card purple">
+        <strong>🎯 审美在线</strong>
+        不是那种丑模板<br>每单认真用心做
+      </div>
+      <div class="reason-card amber">
+        <strong>🤝 包修改</strong>
+        不满意可以改<br>直到你满意为止
+      </div>
+    </div>
+  </div>
+
+  <!-- 作品展示 -->
+  <div class="works">
+    <div class="works-title">📸 最近作品</div>
+    <div class="works-grid">
+      <div class="work-item" style="border-radius:12px;overflow:hidden;aspect-ratio:16/10;">
+        <img src="作品图1.jpg" alt="作品展示" style="width:100%;height:100%;object-fit:cover;display:block;">
+      </div>
+      <div class="work-item" style="border-radius:12px;overflow:hidden;aspect-ratio:16/10;border:2px dashed #cbd5e1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px;background:#f8fafc;">
+        你的另一作品
+      </div>
+    </div>
+  </div>
+
+  <!-- 联系 -->
+  <div class="footer">
+    <div style="width:100px;height:100px;border-radius:12px;overflow:hidden;flex-shrink:0;">
+      <img src="作品图2.jpg" alt="微信二维码" style="width:100%;height:100%;object-fit:cover;display:block;">
+    </div>
+    <div class="contact">
+      <div class="cta">
+        扫码找我 → <span>24h 在线</span>
+      </div>
+      <div class="hint">
+        直接说明需求，<strong>24-48 小时交付</strong> 🔥<br>
+        大学生自己人，好沟通不扯皮
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar"></div>
+</div>
+
+</body>
+</html>

@@ -69,7 +69,6 @@ async function handleListOrders(password) {
 async function handleConfirmPayment(password, orderId) {
   mustAuth(password)
 
-  // 1. 更新状态为 writing
   const { error: updateError } = await supabaseAdmin
     .from('orders')
     .update({ status: 'writing' })
@@ -78,25 +77,15 @@ async function handleConfirmPayment(password, orderId) {
 
   if (updateError) throw new Error('确认失败')
 
-  // 2. 自动触发AI生成
-  try {
-    const { data: order } = await supabaseAdmin
-      .from('orders')
-      .select('*')
-      .eq('id', orderId)
-      .single()
-
+  // 异步后台生成，不阻塞返回
+  supabaseAdmin.from('orders').select('*').eq('id', orderId).single().then(async ({ data: order }) => {
     if (order) {
       const content = await generateEssay(order)
-      await supabaseAdmin
-        .from('orders')
-        .update({ ai_content: content })
-        .eq('id', orderId)
+      if (content) {
+        await supabaseAdmin.from('orders').update({ ai_content: content }).eq('id', orderId)
+      }
     }
-  } catch (genErr) {
-    console.error('AI auto-generate error:', genErr)
-    // 即使生成失败也返回成功，管理员可手动重试
-  }
+  }).catch(err => console.error('AI auto-generate error:', err))
 
   return { success: true, auto_generated: true }
 }
@@ -111,17 +100,17 @@ async function handleGenerate(password, orderId) {
 
   if (!order) throw new Error('订单不存在')
 
-  // 直接调用 generateEssay，模板由 ai.js 内部选择
-  const content = await generateEssay(order)
+  // 异步后台生成，不阻塞返回
+  supabaseAdmin.from('orders').select('*').eq('id', orderId).single().then(async ({ data: order }) => {
+    if (order) {
+      const content = await generateEssay(order)
+      if (content) {
+        await supabaseAdmin.from('orders').update({ ai_content: content }).eq('id', orderId)
+      }
+    }
+  }).catch(err => console.error('AI generate error:', err))
 
-  const { error } = await supabaseAdmin
-    .from('orders')
-    .update({ ai_content: content })
-    .eq('id', orderId)
-
-  if (error) throw new Error('保存失败')
-
-  return { content }
+  return { message: 'AI生成已启动，稍后刷新查看结果' }
 }
 
 async function handleEditContent(password, orderId, content) {

@@ -4,20 +4,6 @@ export const familyTraditionQuestionnaire = {
   description: '形势与政策课程社会调查报告 · 约5000字',
   stages: [
     {
-      id: 'personal_info',
-      title: '个人信息',
-      description: '以下信息将用于报告封面，请如实填写',
-      questions: [
-        { id: 'name', type: 'text', label: '姓名', placeholder: '请输入你的姓名', required: true },
-        { id: 'school', type: 'text', label: '学校/学院', placeholder: '如：XX大学XX学院', required: true },
-        { id: 'hometown', type: 'text', label: '家乡所在地', placeholder: '如：湖南长沙（写省市即可）', required: true },
-        { id: 'major', type: 'text', label: '专业及班级', placeholder: '如：计算机科学1班', required: true },
-        { id: 'grade', type: 'select', label: '年级', options: ['2023级', '2024级', '2025级', '其他'], required: true },
-        { id: 'student_id', type: 'text', label: '学号', placeholder: '用于文件命名（学号+姓名）', required: true },
-        { id: 'title', type: 'text', label: '报告标题', placeholder: '可自拟，留空则由AI自动生成', required: false },
-      ],
-    },
-    {
       id: 'family_materials',
       title: '家风素材',
       description: '请根据你的家庭情况，选择最接近的选项',
@@ -53,6 +39,15 @@ export const familyTraditionQuestionnaire = {
             { value: 'education', label: '多读书才有出息/知识改变命运——崇文重教' },
             { value: 'harmony', label: '家和万事兴/一家人要团结——和睦孝悌' },
             { value: 'tolerance', label: '吃亏是福/别跟人计较——宽厚忍让' },
+            { value: 'diligence', label: '笨鸟先飞/勤能补拙——勤奋努力' },
+            { value: 'gratitude', label: '做人要懂得感恩——知恩图报' },
+            { value: 'independence', label: '靠人不如靠己/自己的事情自己做——独立自强' },
+            { value: 'thrift', label: '钱要省着花/不要乱花钱——勤俭节约' },
+            { value: 'honor', label: '做人要有骨气/别让人看不起——自尊自爱' },
+            { value: 'kindness', label: '要与人为善/多帮帮别人——善良仁爱' },
+            { value: 'down_to_earth', label: '做事要踏实/一步一个脚印——脚踏实地' },
+            { value: 'filial', label: '要对长辈孝顺——孝老爱亲' },
+            { value: 'persistence', label: '做事不能半途而废——坚持不懈' },
           ],
         },
         {
@@ -82,6 +77,31 @@ export const familyTraditionQuestionnaire = {
             { value: 'plain', label: '朴实真诚——平实语言讲真实故事，不刻意拔高' },
             { value: 'elevated', label: '立意高远——更多呼应中华传统美德、红色家风、核心价值观' },
             { value: 'balanced', label: '折中——以真实故事为主体，关键处自然升华' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'personal_info',
+      title: '个人信息',
+      description: '以下信息将用于报告封面和文件命名',
+      questions: [
+        {
+          id: 'name_id', type: 'group',
+          label: '姓名 & 学号',
+          fields: [
+            { id: 'name', label: '姓名', placeholder: '请输入姓名', width: 'half' },
+            { id: 'student_id', label: '学号', placeholder: '用于文件命名', width: 'half' },
+          ],
+        },
+        {
+          id: 'school_info', type: 'group',
+          label: '学校 & 专业信息',
+          fields: [
+            { id: 'school', label: '学校/学院', placeholder: '如：XX大学XX学院', width: 'full' },
+            { id: 'major', label: '专业及班级', placeholder: '如：计算机科学1班', width: 'full' },
+            { id: 'grade', label: '年级', type: 'select', options: ['2023级', '2024级', '2025级', '其他'], width: 'half' },
+            { id: 'hometown', label: '家乡所在地', placeholder: '如：湖南长沙', width: 'half' },
           ],
         },
       ],

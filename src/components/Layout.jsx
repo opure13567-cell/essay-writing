@@ -15,7 +15,7 @@ export default function Layout({ children }) {
           onClick={() => navigate('/')}
           className="text-lg font-bold text-blue-600"
         >
-          ✍️ 写作助手
+          ✍️ 形势与政策 · 论文助手
         </button>
         <button
           onClick={() => navigate('/orders')}
@@ -31,8 +31,10 @@ export default function Layout({ children }) {
       </main>
 
       {/* 底部 */}
-      <footer className="text-center text-xs text-gray-400 py-4 border-t border-gray-50">
-        AI写作参考素材 · 请勿直接提交为作业
+      <footer className="text-center text-xs text-gray-400 py-4 border-t border-gray-50 space-y-1">
+        <p>🔒 充分尊重用户隐私，所有信息仅用于约定写作服务</p>
+        <p>如有泄露，依法承担赔偿责任</p>
+        <p>适用于 2023级—2025级 全体学生</p>
       </footer>
     </div>
   )

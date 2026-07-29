@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ChoiceQuestion from './ChoiceQuestion'
 import PersonalInfoForm from './PersonalInfoForm'
+import MultiFieldGroup from './MultiFieldGroup'
 
 export default function QuestionFlow({ questionnaire, onComplete }) {
   const allQuestions = questionnaire.stages.flatMap((stage) =>
@@ -15,12 +16,16 @@ export default function QuestionFlow({ questionnaire, onComplete }) {
   const progress = Math.round((currentIdx / totalQuestions) * 100)
   const isLast = currentIdx === totalQuestions - 1
 
-  // 检查是否进入新阶段
   const showStageBanner = currentIdx === 0 ||
     allQuestions[currentIdx].stageId !== allQuestions[currentIdx - 1].stageId
 
   const handleSelect = (questionId, value) => {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }))
+    if (typeof value === 'object') {
+      // 多字段组：合并到 answers
+      setAnswers((prev) => ({ ...prev, ...value }))
+    } else {
+      setAnswers((prev) => ({ ...prev, [questionId]: value }))
+    }
   }
 
   const handleNext = () => {
@@ -29,7 +34,15 @@ export default function QuestionFlow({ questionnaire, onComplete }) {
       const materialAnswers = {}
       questionnaire.stages.forEach((stage) => {
         stage.questions.forEach((q) => {
-          if (stage.id === 'personal_info') {
+          if (q.type === 'group') {
+            q.fields.forEach((f) => {
+              if (stage.id === 'personal_info') {
+                personalInfo[f.id] = answers[f.id] || ''
+              } else {
+                materialAnswers[f.id] = answers[f.id] || ''
+              }
+            })
+          } else if (stage.id === 'personal_info') {
             personalInfo[q.id] = answers[q.id] || ''
           } else {
             materialAnswers[q.id] = answers[q.id] || ''
@@ -50,14 +63,24 @@ export default function QuestionFlow({ questionnaire, onComplete }) {
     if (currentIdx > 0) setCurrentIdx((prev) => prev - 1)
   }
 
-  const currentValue = answers[currentQuestion.id]
+  const currentValue = currentQuestion.type === 'group'
+    ? currentQuestion.fields.reduce((acc, f) => ({ ...acc, [f.id]: answers[f.id] || '' }), {})
+    : answers[currentQuestion.id]
+
   const canAdvance = currentQuestion.required
-    ? currentValue && (typeof currentValue === 'string' ? currentValue.trim() !== '' : true)
+    ? (() => {
+        if (currentQuestion.type === 'group') {
+          return currentQuestion.fields.every(f => {
+            const v = answers[f.id]
+            return v && (typeof v === 'string' ? v.trim() !== '' : true)
+          })
+        }
+        return currentValue && (typeof currentValue === 'string' ? currentValue.trim() !== '' : true)
+      })()
     : true
 
   return (
     <div className="space-y-6">
-      {/* 阶段标题 */}
       {showStageBanner && (
         <div className="bg-blue-50 rounded-lg p-3 -mx-1">
           <p className="text-sm font-medium text-blue-800">{currentQuestion.stageTitle}</p>
@@ -67,7 +90,6 @@ export default function QuestionFlow({ questionnaire, onComplete }) {
         </div>
       )}
 
-      {/* 进度条 */}
       <div className="space-y-1">
         <div className="flex justify-between text-xs text-gray-400">
           <span>第 {currentIdx + 1} 题</span>
@@ -81,13 +103,18 @@ export default function QuestionFlow({ questionnaire, onComplete }) {
         </div>
       </div>
 
-      {/* 题目内容 */}
       <div className="min-h-[180px]">
         {currentQuestion.type === 'choice' ? (
           <ChoiceQuestion
             question={currentQuestion}
             value={currentValue}
             onSelect={(v) => handleSelect(currentQuestion.id, v)}
+          />
+        ) : currentQuestion.type === 'group' ? (
+          <MultiFieldGroup
+            question={currentQuestion}
+            values={currentValue}
+            onChange={(fieldId, val) => handleSelect(fieldId, val)}
           />
         ) : (
           <PersonalInfoForm
@@ -98,7 +125,6 @@ export default function QuestionFlow({ questionnaire, onComplete }) {
         )}
       </div>
 
-      {/* 导航 */}
       <div className="flex gap-3 pt-4 border-t border-gray-100">
         {currentIdx > 0 && (
           <button
