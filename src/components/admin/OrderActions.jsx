@@ -25,8 +25,8 @@ export default function OrderActions({
         </button>
       )}
 
-      {/* AI生成 */}
-      {(order.status === 'writing' || order.status === 'paid') && (
+      {/* AI生成 - 仅在没有内容时显示 */}
+      {(order.status === 'writing' || order.status === 'paid') && !order.ai_content && !order.edited_content && (
         <button
           onClick={() => onGenerate(order.id)}
           disabled={isLoading('generate')}
