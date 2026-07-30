@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { api } from '../../utils/api'
 import { formatOrderMeta } from '../../utils/admin'
 import StatusBadge from '../StatusBadge'
 import OrderActions from './OrderActions'
@@ -18,6 +20,22 @@ export default function OrderCard({
   onDownload,
   onSaveContent,
 }) {
+  const [screenshot, setScreenshot] = useState(null)
+  const [loadingScreenshot, setLoadingScreenshot] = useState(false)
+
+  const handleViewScreenshot = async () => {
+    if (screenshot) return // 已加载过
+    setLoadingScreenshot(true)
+    try {
+      const pwd = sessionStorage.getItem('admin_password')
+      const data = await api.adminGetOrderContent(pwd, order.id)
+      setScreenshot(data?.payment_screenshot || null)
+    } catch (err) {
+      // ignore
+    }
+    setLoadingScreenshot(false)
+  }
+
   const borderColor = {
     paid: 'border-l-orange-400',
     writing: 'border-l-purple-400',
@@ -53,32 +71,28 @@ export default function OrderCard({
         </details>
       )}
 
-      {/* 付款截图 */}
-      {order.payment_screenshot && (
-        <div>
-          <span className="text-xs text-gray-400">付款截图：</span>
-          <a
-            href={order.payment_screenshot}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-2 text-xs text-blue-600 underline"
-          >
-            点击查看大图
-          </a>
-          <img
-            src={order.payment_screenshot}
-            alt="付款截图"
-            className="mt-1 rounded border border-gray-300 block max-w-[200px] object-contain"
-            onError={(e) => {
-              e.target.style.display = 'none'
-              e.target.nextElementSibling?.classList.remove('hidden')
-            }}
-          />
-          <span className="hidden text-xs text-red-400 mt-1">
-            无法加载预览，请点击上方链接查看
-          </span>
-        </div>
-      )}
+      {/* 付款截图（点击加载，避免base64拖慢整体） */}
+      <div>
+        <button
+          onClick={handleViewScreenshot}
+          className="text-xs text-blue-600 underline hover:text-blue-800"
+        >
+          {loadingScreenshot ? '⏳ 加载中...' : screenshot ? '🖼️ 付款截图' : '🖼️ 查看付款截图'}
+        </button>
+        {screenshot && (
+          <div className="mt-1">
+            <a href={screenshot} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 underline mr-2">
+              点击查看大图
+            </a>
+            <img
+              src={screenshot}
+              alt="付款截图"
+              className="mt-1 rounded border border-gray-300 block max-w-[200px] object-contain"
+              onError={(e) => { e.target.style.display = 'none' }}
+            />
+          </div>
+        )}
+      </div>
 
       {/* 操作按钮 */}
       <OrderActions

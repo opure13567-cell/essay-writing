@@ -120,9 +120,7 @@ async function handleListOrders(supabaseAdmin, password, adminPassword) {
   // 列表返回带内容标记，用于判断是否可发稿
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select('id, user_token, type, word_count, price, status, created_at, deadline, is_rush, description, payment_screenshot, ai_content, edited_content, plagiarism_report')
-    .limit(100)
-    .limit(100)
+    .select('id, user_token, type, word_count, price, status, created_at, deadline, is_rush, description, ai_content, edited_content, plagiarism_report')
     .order('created_at', { ascending: false })
   if (error) throw new Error('查询失败')
   return data
@@ -266,11 +264,11 @@ async function handleGetOrderContent(supabaseAdmin, password, adminPassword, ord
   mustAuth(password, adminPassword)
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select('ai_content, edited_content')
+    .select('ai_content, edited_content, payment_screenshot')
     .eq('id', orderId)
     .single()
   if (error || !data) throw new Error('订单不存在')
-  return { ai_content: data.ai_content, edited_content: data.edited_content }
+  return { ai_content: data.ai_content, edited_content: data.edited_content, payment_screenshot: data.payment_screenshot }
 }
 
 async function handleGetConfig(supabaseAdmin, password, adminPassword) {
