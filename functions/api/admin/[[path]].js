@@ -115,7 +115,7 @@ async function handleListOrders(supabaseAdmin, password, adminPassword) {
   // 列表返回带内容标记，用于判断是否可发稿
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select('id, user_token, type, word_count, price, status, created_at, deadline, is_rush')
+    .select('id, user_token, type, word_count, price, status, created_at, deadline, is_rush, description, payment_screenshot, ai_content, edited_content, plagiarism_report')
     .limit(100)
     .limit(100)
     .order('created_at', { ascending: false })
