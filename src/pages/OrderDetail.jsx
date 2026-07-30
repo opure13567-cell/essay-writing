@@ -151,7 +151,7 @@ export default function OrderDetail() {
           {order.plagiarism_report ? (
             <div className="text-center py-6">
               <div className="text-5xl mb-3">📄</div>
-              <a href={`/api/orders/download/${order.id}`} download className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">
+              <a href={order.plagiarism_report} download className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700">
                 下载修改稿
               </a>
               <p className="text-xs text-gray-400 mt-2">点击下载修改后的Word文件，用WPS打开</p>

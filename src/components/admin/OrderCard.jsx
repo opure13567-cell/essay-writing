@@ -102,7 +102,7 @@ export default function OrderCard({
       {/* 已发稿显示修改稿链接 */}
       {order.status === 'done' && order.plagiarism_report && (
         <div className="bg-green-50 rounded p-3 text-sm">
-          <a href={`/api/orders/download/${order.id}`} className="text-blue-600 underline">
+          <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="text-blue-600 underline">
             📄 查看修改稿
           </a>
         </div>

@@ -49,7 +49,7 @@ export default function OrderActions({
           {order.plagiarism_report ? (
             <span className="px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg inline-flex items-center gap-1">
               ✅ 修订稿已上传
-              <a href={`/api/orders/download/${order.id}`} className="underline ml-1">预览</a>
+              <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="underline ml-1">预览</a>
             </span>
           ) : (
             <label className="px-3 py-2 bg-yellow-100 text-yellow-700 text-sm rounded-lg hover:bg-yellow-200 cursor-pointer">
@@ -86,7 +86,7 @@ export default function OrderActions({
           {order.plagiarism_report ? (
             <>
               <span className="text-xs text-gray-500">(修订稿)</span>
-              <a href={`/api/orders/download/${order.id}`} className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-lg hover:bg-green-200">
+              <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-lg hover:bg-green-200">
                 📄 查看修订稿
               </a>
             </>
