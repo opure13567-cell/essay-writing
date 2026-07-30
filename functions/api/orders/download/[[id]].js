@@ -27,12 +27,27 @@ export async function onRequest(context) {
     }
   } catch {}
 
-  let content = order.edited_content || order.ai_content || ''
-  content = cleanMarkdown(content)
-
   const studentId = personalInfo.student_id || 'unknown'
   const name = personalInfo.name || 'unknown'
-  const fileName = `${studentId}${name}.doc`
+  const fileName = `${studentId}${name}`
+
+  // 如果有管理员上传的修改稿，直接代理下载，用学号姓名命名
+  if (order.plagiarism_report) {
+    const fileRes = await fetch(order.plagiarism_report)
+    if (!fileRes.ok) {
+      return new Response('文件获取失败', { status: 502 })
+    }
+    const blob = await fileRes.arrayBuffer()
+    const ext = order.plagiarism_report.endsWith('.doc') ? '.doc' : '.docx'
+    return new Response(blob, {
+      headers: {
+        'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName + ext)}"`,
+      },
+    })
+  }
+
+  let content = order.edited_content || order.ai_content || ''
 
   // 个人信息行：姓名、学院、专业及班级、年级、学号（不包含家乡）
   const infoParts = []
@@ -93,7 +108,7 @@ ${bodyHtml}
   return new Response('﻿' + html, {
     headers: {
       'Content-Type': 'application/msword; charset=utf-8',
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName + '.doc')}"`,
     },
   })
 }
