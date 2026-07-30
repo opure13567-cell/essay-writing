@@ -231,7 +231,7 @@ async function handleComplete(supabaseAdmin, password, adminPassword, orderId) {
   mustAuth(password, adminPassword)
   const { data: order } = await supabaseAdmin
     .from('orders')
-    .select('edited_content, ai_content')
+    .select('edited_content, ai_content, plagiarism_report')
     .eq('id', orderId)
     .single()
 
