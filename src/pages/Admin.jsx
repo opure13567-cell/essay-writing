@@ -1,41 +1,50 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../utils/api'
 import { downloadDocx } from '../utils/generateDocx'
-import StatusBadge from '../components/StatusBadge'
-
-// 新订单通知音（简短提示音）
-function playNotificationSound() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.frequency.value = 800
-    osc.type = 'sine'
-    gain.gain.value = 0.3
-    osc.start()
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5)
-    osc.stop(ctx.currentTime + 0.5)
-  } catch {}
-}
+import { toast } from '../utils/toast'
+import { filterOrders, searchOrders } from '../utils/admin'
+import { playNotificationSound, requestNotificationPermission, sendBrowserNotification } from '../utils/notification'
+import AdminLogin from '../components/admin/AdminLogin'
+import AdminDashboard from '../components/admin/AdminDashboard'
+import OrderFilters from '../components/admin/OrderFilters'
+import OrderCard from '../components/admin/OrderCard'
+import ConfigPanel from '../components/admin/ConfigPanel'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 export default function Admin() {
-  const [password, setPassword] = useState(() => localStorage.getItem('admin_password') || '')
+  // --- auth state ---
+  const [password, setPassword] = useState(() => sessionStorage.getItem('admin_password') || '')
   const [authed, setAuthed] = useState(false)
+
+  // --- data state ---
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState({})
+  const [loadingStates, setLoadingStates] = useState({})
   const [editContent, setEditContent] = useState({})
-  const [activeTab, setActiveTab] = useState('all')
-  const [newOrderAlert, setNewOrderAlert] = useState(false)
-  const knownIdsRef = useRef(new Set())
 
-  // 自动刷新订单（每30秒）
+  // --- ui state ---
+  const [activeTab, setActiveTab] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [showConfig, setShowConfig] = useState(false)
+  const [newOrderAlert, setNewOrderAlert] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState(null)
+
+  // --- confirm dialog state ---
+  const [confirm, setConfirm] = useState({ isOpen: false, title: '', message: '', onConfirm: null })
+
+  // --- refs ---
+  const knownIdsRef = useRef(new Set())
+  const audioCtxRef = useRef(null)
+  const pollingRef = useRef(null)
+
+  // --- 加载订单 ---
   const loadOrders = useCallback(async (pwd) => {
+    const pw = pwd || password
+    if (!pw) return
     setLoading(true)
     try {
-      const data = await api.adminGetOrders(pwd || password)
+      const data = await api.adminGetOrders(pw)
       // 检测新订单
       const prevIds = knownIdsRef.current
       const newOnes = data.filter(o => !prevIds.has(o.id))
@@ -43,358 +52,310 @@ export default function Admin() {
         playNotificationSound()
         setNewOrderAlert(true)
         setTimeout(() => setNewOrderAlert(false), 5000)
-                // 浏览器通知
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          try {
-            new Notification(`新订单`, {
-              body: `有 ${newOnes.length} 个新订单，¥${newOnes[0].price}`,
-            })
-          } catch (e) {}
-        }
+        sendBrowserNotification('新订单', `有 ${newOnes.length} 个新订单，¥${newOnes[0].price}`)
       }
-      // 更新已知ID
       knownIdsRef.current = new Set(data.map(o => o.id))
       setOrders(data)
-    } catch {}
+      setLastRefresh(new Date())
+    } catch (err) {
+      if (err.message !== '口令错误') {
+        toast.error('加载订单失败: ' + err.message)
+      }
+    }
     setLoading(false)
   }, [password])
 
-  // 尝试自动登录
+  // --- 自动登录 ---
   useEffect(() => {
-    if (password) handleLogin(password)
+    if (password) handleLogin(password, true)
   }, [])
 
-  // 请求通知权限
+  // --- 请求通知权限 ---
   useEffect(() => {
-    if (authed && typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      try { Notification.requestPermission() } catch (e) {}
-    }
+    if (authed) requestNotificationPermission()
   }, [authed])
 
-  // 自动轮询
+  // --- 轮询（带可见性优化）---
   useEffect(() => {
     if (!authed) return
-    const interval = setInterval(() => loadOrders(), 30000)
-    return () => clearInterval(interval)
+
+    const startPolling = () => {
+      pollingRef.current = setInterval(() => loadOrders(), 30000)
+    }
+    const stopPolling = () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
+
+    startPolling()
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopPolling()
+      } else {
+        loadOrders()
+        startPolling()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [authed, loadOrders])
 
-  const handleLogin = async (pwd) => {
+  // --- 登录 ---
+  const handleLogin = async (pwd, isAuto) => {
     try {
       await api.adminLogin(pwd)
-      localStorage.setItem('admin_password', pwd)
+      sessionStorage.setItem('admin_password', pwd)
       setPassword(pwd)
       setAuthed(true)
       loadOrders(pwd)
     } catch {
+      if (!isAuto) toast.error('口令错误')
       setAuthed(false)
     }
   }
 
+  // --- 确认收款 ---
   const handleConfirmPayment = async (orderId) => {
+    setLoadingStates(prev => ({ ...prev, confirm: true }))
     try {
       await api.adminConfirmPayment(password, orderId)
+      toast.success('已确认收款，AI生成已启动')
       loadOrders()
     } catch (err) {
-      alert('确认失败: ' + err.message)
+      toast.error('确认失败: ' + err.message)
     }
+    setLoadingStates(prev => ({ ...prev, confirm: false }))
   }
 
-      const handleGenerate = async (orderId) => {
+  // --- AI生成 ---
+  const handleGenerate = async (orderId) => {
     setGenerating(prev => ({ ...prev, [orderId]: true }))
     try {
-      // 通过服务端代理调用 DeepSeek（避免微信浏览器跨域问题）
       const order = orders.find(o => o.id === orderId)
-      const desc = order?.description || ''
       const wordCount = order?.word_count || 5000
-      const label = order?.type === 'family_tradition' ? '我的家风家训调查报告' : '文章'
+      const typeLabels = { family_tradition: '我的家风家训调查报告', hometown_change: '家乡变迁看制度优势调查报告', industry_interview: '行业人物访谈报告' }
+      const label = typeLabels[order?.type] || '调查报告'
+      const prompt = `你是一名大学本科生。请根据素材写一篇${label}，字数约${wordCount}字。
 
-      const TITLES = ['守得云开见月明——我的家风家训调查报告','一粥一饭当思来处——记我家的勤俭之风','父亲的工具箱里装着什么——我的家风调查报告','那些年，母亲教我的事——我的家风家训','田埂上的家风——一个普通家庭的传承故事','一盏灯，三代人——我的家风家训调查报告','诚实做人，踏实做事——我的家风家训','把根留住——我的家风家训调查报告','老屋里的家风——我的家风家训','从一块奖章说起——我的家风家训调查报告','家风如雨，润物无声——我的家风家训','一把锄头传三代——我的家风调查报告','饭桌上的规矩——我的家风家训','那些刻在骨子里的话——我的家风家训调查报告','平凡人家的传家宝——我的家风家训']
-      const myTitle = TITLES[Math.floor(Math.random() * TITLES.length)]
+标题自拟，包含：摘要+关键词、正文（4-6章）、附录。
+用第一人称我，口语化。
+禁止：首先其次最后、综上所述、值得注意的是、不可否认、随着...的发展
+家训概括成八个字。
 
-      const prompt = `你是一名大学本科生。请根据以下素材写一篇《我的家风家训》社会调查报告，字数约${wordCount}字。
-
-标题：${myTitle}（第一行就是标题）
-
-结构：标题 → 摘要+关键词 → 正文（4-6章）→ 附录（访谈提纲）
-
-写作要求：
-1. 第一人称"我"，口语化
-2. 禁止：首先其次最后、综上所述、值得注意的是、不可否认、随着...的发展、说实话
-3. 家训概括成八个字
-4. 引用家人话用大白话
-5. 结尾不要加任何说明文字
-6. 不要出现具体人名、年龄、年级、学校名、地名
-
-素材：
-${desc}`
+素材：${order?.description || ''}`
 
       const result = await api.adminGenerateProxy(password, prompt)
-      if (result.content) {
+      if (result?.content) {
         await api.adminEditContent(password, orderId, result.content)
         setEditContent(prev => ({ ...prev, [orderId]: result.content }))
+        toast.success('AI内容生成成功')
         loadOrders()
       } else {
-        alert('生成内容为空')
+        toast.warning('生成内容为空')
       }
     } catch (err) {
-      alert('AI生成失败: ' + err.message)
+      toast.error('AI生成失败: ' + err.message)
     }
     setGenerating(prev => ({ ...prev, [orderId]: false }))
   }
 
-const handleComplete = async (orderId) => {
-    const content = editContent[orderId]
-    if (content) {
-      try {
-        await api.adminEditContent(password, orderId, content)
-      } catch {}
-    }
-    try {
-      await api.adminComplete(password, orderId)
-      loadOrders()
-    } catch (err) {
-      alert('发稿失败: ' + err.message)
-    }
+  // --- 保存编辑内容 ---
+  const handleSaveContent = async (orderId, content) => {
+    await api.adminEditContent(password, orderId, content)
+    setEditContent(prev => ({ ...prev, [orderId]: content }))
+    loadOrders()
   }
 
-  const handleRefresh = () => loadOrders()
+  // --- 发稿 ---
+  const handleComplete = async (orderId) => {
+    setLoadingStates(prev => ({ ...prev, publish: true }))
+    try {
+      await api.adminComplete(password, orderId)
+      toast.success('✅ 已发稿！（发送的是最终稿件）')
+      loadOrders()
+    } catch (err) {
+      toast.error('发稿失败: ' + err.message)
+    }
+    setLoadingStates(prev => ({ ...prev, publish: false }))
+  }
+
+  const requestComplete = (orderId) => {
+    setConfirm({
+      isOpen: true,
+      title: '确认发稿',
+      message: '确认将此订单的最终稿发给客户？此操作不可撤销。',
+      onConfirm: () => {
+        setConfirm(prev => ({ ...prev, isOpen: false }))
+        handleComplete(orderId)
+      },
+    })
+  }
+
+  // --- 上传文件 ---
+  const handleUploadFile = async (orderId, file) => {
+    setLoadingStates(prev => ({ ...prev, upload: true }))
+    try {
+      const result = await api.adminUploadFile(password, orderId, file)
+      if (result.url) {
+        toast.success('修改稿上传成功')
+        loadOrders()
+      } else {
+        toast.error('上传失败: ' + (result.error || '未知错误'))
+      }
+    } catch (err) {
+      toast.error('上传失败: ' + err.message)
+    }
+    setLoadingStates(prev => ({ ...prev, upload: false }))
+  }
+
+  // --- 下载 ---
+  const handleDownload = (order) => {
+    downloadDocx(order)
+  }
+
+  // --- 退出 ---
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_password')
+    setPassword('')
+    setAuthed(false)
+    setOrders([])
+    toast.info('已退出登录')
+  }
+
+  const requestLogout = () => {
+    setConfirm({
+      isOpen: true,
+      title: '退出登录',
+      message: '确定要退出管理后台吗？',
+      onConfirm: () => {
+        setConfirm(prev => ({ ...prev, isOpen: false }))
+        handleLogout()
+      },
+    })
+  }
+
+  // ====== 渲染 ======
 
   // 登录界面
   if (!authed) {
-    return (
-      <div className="max-w-sm mx-auto py-20 px-4">
-        <h2 className="text-xl font-bold text-center mb-6">🔐 管理后台</h2>
-        <form onSubmit={e => { e.preventDefault(); handleLogin(password); }}>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="请输入管理口令"
-            className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm mb-3 outline-none focus:border-blue-500"
-          />
-          <button
-            type="submit"
-            className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700"
-          >
-            登录
-          </button>
-        </form>
-      </div>
-    )
+    return <AdminLogin onLogin={handleLogin} initialPassword={password} />
   }
 
-  // 筛选订单
-  const tabs = [
-    { key: 'all', label: '全部' },
-    { key: 'paid', label: '待确认' },
-    { key: 'writing', label: '写稿中' },
-    { key: 'done', label: '已完成' },
-  ]
-
-  const filteredOrders = activeTab === 'all'
-    ? orders
-    : orders.filter(o => o.status === activeTab)
-
-  const newPaidCount = orders.filter(o => o.status === 'paid').length
+  // 筛选 + 搜索
+  const paidCount = orders.filter(o => o.status === 'paid').length
+  const filteredByTab = filterOrders(orders, activeTab)
+  const displayedOrders = searchOrders(filteredByTab, searchQuery)
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-4">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
+      {/* 新订单提示 */}
       {newOrderAlert && (
         <div className="bg-red-500 text-white text-center py-2 px-4 rounded-lg mb-3 animate-pulse text-sm font-medium">
           🔔 有新订单！已自动刷新
         </div>
       )}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">🔐 管理后台</h2>
-        <button onClick={handleRefresh} className="text-sm text-blue-600">
-          {loading ? '刷新中...' : '🔄 刷新'}
-        </button>
+
+      {/* 顶栏 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold">🔐 管理后台</h2>
+          <button
+            onClick={() => loadOrders()}
+            className="text-sm text-blue-600 hover:text-blue-800"
+          >
+            {loading ? '⟳ 刷新中...' : '🔄 刷新'}
+          </button>
+          {lastRefresh && (
+            <span className="text-[10px] text-gray-400 hidden sm:inline">
+              更新于 {lastRefresh.toLocaleTimeString('zh-CN')}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowConfig(true)}
+            className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+          >
+            ⚙️ 设置
+          </button>
+          <button
+            onClick={requestLogout}
+            className="px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 rounded-lg"
+          >
+            退出
+          </button>
+        </div>
       </div>
 
-      {/* Tab切换 */}
-      <div className="flex gap-2 mb-4 overflow-x-auto">
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-1.5 rounded-full text-sm whitespace-nowrap ${
-              activeTab === tab.key
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            {tab.label}
-            {tab.key === 'paid' && newPaidCount > 0 && (
-              <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {newPaidCount}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      {/* 统计看板 */}
+      <AdminDashboard orders={orders} />
+
+      {/* 筛选栏 */}
+      <OrderFilters
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        paidCount={paidCount}
+      />
 
       {/* 订单列表 */}
-      <div className="space-y-3">
-        {filteredOrders.map(order => (
-          <div key={order.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">#{order.id} · ¥{order.price}</span>
-              <StatusBadge status={order.status} />
-            </div>
-
-            <div className="text-xs text-gray-500">
-              {order.word_count}字 · {order.type}
-              {order.is_rush && ' · ⚡加急'} · {new Date(order.created_at).toLocaleString('zh-CN')}
-            </div>
-
-            <div className="bg-gray-50 rounded p-2 text-xs text-gray-600 max-h-20 overflow-y-auto">
-              {order.description}
-            </div>
-
-            {/* 付款截图 */}
-            {order.payment_screenshot && (
-              <div>
-                <span className="text-xs text-gray-400">付款截图：</span>
-                <a
-                  href={order.payment_screenshot}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-2 text-xs text-blue-600 underline"
-                >
-                  点击查看大图
-                </a>
-                <img
-                  src={order.payment_screenshot}
-                  alt="付款截图"
-                  className="mt-1 rounded border border-gray-300 block"
-                  style={{ width: '160px', objectFit: 'contain' }}
-                  onError={(e) => {
-                    e.target.style.display = 'none'
-                    e.target.nextSibling.style.display = 'block'
-                  }}
-                />
-                <span className="hidden text-xs text-red-400 mt-1">
-                  无法加载预览，请点击上方链接查看
-                </span>
-              </div>
-            )}
-
-            {/* 操作按钮 */}
-            <div className="flex gap-2 flex-wrap">
-              {/* 待确认付款 */}
-              {order.status === 'paid' && (
-                <button
-                  onClick={() => handleConfirmPayment(order.id)}
-                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-                >
-                  ✅ 确认收款
-                </button>
-              )}
-
-              {/* AI生成按钮 */}
-              {(order.status === 'writing' || order.status === 'paid') && (
-                <button
-                  onClick={() => handleGenerate(order.id)}
-                  disabled={generating[order.id]}
-                  className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:bg-gray-300"
-                >
-                  {generating[order.id] ? '🤖 生成中...' : '🤖 AI生成'}
-                </button>
-              )}
-
-              {/* 下载/上传/发稿 */}
-              {(order.ai_content || order.edited_content) && order.status !== 'done' && (
-                <div className="space-y-2">
-                  <div className="flex gap-2 flex-wrap">
-                    <button onClick={() => downloadDocx(order)} className="px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg hover:bg-green-200">
-                      📥 下载Word
-                    </button>
-                    {order.plagiarism_report ? (
-                      <span className="px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg inline-flex items-center gap-1">
-                        ✅ 文件已上传
-                        <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="underline ml-1">查看</a>
-                      </span>
-                    ) : (
-                      <label className="px-3 py-2 bg-yellow-100 text-yellow-700 text-sm rounded-lg hover:bg-yellow-200 cursor-pointer">
-                        📤 上传修改稿
-                        <input type="file" accept=".docx,.doc" className="hidden" onChange={async (e) => {
-                          const file = e.target.files?.[0]
-                          if (!file) return
-                          const result = await api.adminUploadFile(password, order.id, file)
-                          if (result.url) {
-                            loadOrders()
-                          } else {
-                            alert('上传失败: ' + (result.error || '未知错误'))
-                          }
-                          e.target.value = ''
-                        }} />
-                      </label>
-                    )}
-                    <button onClick={() => handleComplete(order.id)} className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-                      📤 发稿
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {order.status === 'done' && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-green-600">✅ 已发稿</span>
-                  {order.plagiarism_report ? (
-                    <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-green-100 text-green-700 text-xs rounded-lg hover:bg-green-200">
-                      📄 查看修改稿
-                    </a>
-                  ) : (
-                    <button onClick={() => downloadDocx(order)} className="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs rounded-lg hover:bg-blue-200">
-                      📥 下载Word
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* AI生成内容编辑区 — 仅在上传修改稿前显示 */}
-            {!order.plagiarism_report && (order.ai_content || order.edited_content || editContent[order.id]) && order.status !== 'done' && (
-              <div>
-                <textarea
-                  value={editContent[order.id] ?? order.edited_content ?? order.ai_content}
-                  onChange={e => setEditContent(prev => ({ ...prev, [order.id]: e.target.value }))}
-                  rows={8}
-                  className="w-full border border-gray-200 rounded-lg p-3 text-sm outline-none focus:border-blue-500 resize-none"
-                  placeholder="AI生成的文章..."
-                />
-              </div>
-            )}
-
-            {/* 已发稿 — 有修改稿则显示链接 */}
-            {order.status === 'done' && order.plagiarism_report && (
-              <div className="bg-green-50 rounded p-3 mt-2 text-sm">
-                <a href={order.plagiarism_report} target="_blank" rel="noreferrer" className="text-blue-600 underline">
-                  📄 查看修改稿
-                </a>
-              </div>
-            )}
+      {displayedOrders.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <div className="text-4xl mb-3">
+            {activeTab === 'all' && !searchQuery ? '📭' : '🔍'}
           </div>
-        ))}
+          <p>{searchQuery ? '没有匹配的订单' : activeTab === 'paid' ? '暂无待确认订单' : activeTab === 'writing' ? '暂无写稿中订单' : activeTab === 'done' ? '暂无已完成订单' : '暂无订单'}</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+          {displayedOrders.map(order => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              generating={generating}
+              loadingStates={loadingStates}
+              editContent={editContent[order.id]}
+              onConfirmPayment={handleConfirmPayment}
+              onGenerate={handleGenerate}
+              onUploadFile={handleUploadFile}
+              onComplete={requestComplete}
+              onDownload={handleDownload}
+              onSaveContent={handleSaveContent}
+            />
+          ))}
+        </div>
+      )}
 
-        {filteredOrders.length === 0 && (
-          <div className="text-center py-10 text-gray-400">暂无订单</div>
-        )}
+      {/* 订单计数 */}
+      <div className="mt-4 text-center text-xs text-gray-400">
+        共 {displayedOrders.length} 条订单
+        {searchQuery && `（搜索过滤自 ${filteredByTab.length} 条）`}
       </div>
 
-      {/* 底部工具栏 */}
-      <div className="mt-8 pt-4 border-t border-gray-100 text-center">
-        <button
-          onClick={() => {
-            localStorage.removeItem('admin_password')
-            setAuthed(false)
-            setPassword('')
-          }}
-          className="text-sm text-red-500"
-        >
-          退出登录
-        </button>
-      </div>
+      {/* 确认对话框 */}
+      <ConfirmDialog
+        isOpen={confirm.isOpen}
+        title={confirm.title}
+        message={confirm.message}
+        onConfirm={confirm.onConfirm || (() => {})}
+        onCancel={() => setConfirm(prev => ({ ...prev, isOpen: false }))}
+        variant="danger"
+        confirmLabel="确认"
+        cancelLabel="取消"
+      />
+
+      {/* 配置面板 */}
+      {showConfig && (
+        <ConfigPanel password={password} onClose={() => setShowConfig(false)} />
+      )}
     </div>
   )
 }

@@ -76,7 +76,7 @@ ${order.description}`
   const res = await fetch(DEEPSEEK_API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 14000, temperature: 0.9, messages: [{ role: 'user', content: prompt }] }),
+    body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 8000, temperature: 0.9, messages: [{ role: 'user', content: prompt }] }),
   })
 
   if (!res.ok) {

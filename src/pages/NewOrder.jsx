@@ -49,9 +49,10 @@ export default function NewOrder() {
 
   if (loading) {
     return (
-      <div className="text-center py-16">
-        <div className="text-4xl mb-4">⏳</div>
-        <p className="text-gray-500">正在创建订单...</p>
+      <div className="text-center py-16 space-y-4">
+        <div className="text-5xl mb-4 animate-pulse">⏳</div>
+        <p className="text-gray-600 font-medium">正在创建订单，请稍候...</p>
+        <p className="text-xs text-gray-400">首次创建可能稍慢，请耐心等待</p>
       </div>
     )
   }

@@ -1,6 +1,7 @@
 import { Component } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
+import Toast from './components/Toast'
 import Home from './pages/Home'
 import NewOrder from './pages/NewOrder'
 import PayOrder from './pages/PayOrder'
@@ -39,6 +40,7 @@ class ErrorBoundary extends Component {
 export default function App() {
   return (
     <ErrorBoundary>
+      <Toast />
       <HashRouter>
         <Layout>
           <Routes>

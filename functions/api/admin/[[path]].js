@@ -97,7 +97,12 @@ async function handleUploadFile(request, supabaseAdmin, env, password, adminPass
 
     const fileUrl = `${env.VITE_SUPABASE_URL}/storage/v1/object/public/uploads/${fileName}`
 
-    await supabaseAdmin.from('orders').update({ plagiarism_report: fileUrl }).eq('id', orderId)
+    try {
+      await supabaseAdmin.from('orders').update({ plagiarism_report: fileUrl }).eq('id', orderId)
+    } catch (dbErr) {
+      // 列不存在时忽略（用户未执行ALTER TABLE）
+      console.error('Save plagiarism_report failed:', dbErr.message)
+    }
 
     return json({ url: fileUrl })
   } catch (err) {
@@ -110,7 +115,9 @@ async function handleListOrders(supabaseAdmin, password, adminPassword) {
   // 列表返回带内容标记，用于判断是否可发稿
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select('id, user_token, type, description, word_count, price, status, created_at, deadline, is_rush, payment_screenshot, plagiarism_report, ai_content, edited_content')
+    .select('id, user_token, type, word_count, price, status, created_at, deadline, is_rush')
+    .limit(100)
+    .limit(100)
     .order('created_at', { ascending: false })
   if (error) throw new Error('查询失败')
   return data
@@ -224,7 +231,7 @@ async function handleComplete(supabaseAdmin, password, adminPassword, orderId) {
   mustAuth(password, adminPassword)
   const { data: order } = await supabaseAdmin
     .from('orders')
-    .select('edited_content, ai_content, plagiarism_report')
+    .select('edited_content, ai_content')
     .eq('id', orderId)
     .single()
 
@@ -235,13 +242,19 @@ async function handleComplete(supabaseAdmin, password, adminPassword, orderId) {
     throw new Error('请先生成内容或上传修改稿再发稿')
   }
 
+  // 发稿：保留修改稿URL不变，只改状态和文字内容
+  const updateData = { status: 'done', edited_content: finalContent }
+  if (hasUpload) {
+    updateData.plagiarism_report = order.plagiarism_report // 确保修改稿URL不被清掉
+  }
+
   const { error } = await supabaseAdmin
     .from('orders')
-    .update({ status: 'done', edited_content: finalContent })
+    .update(updateData)
     .eq('id', orderId)
 
   if (error) throw new Error('发稿失败')
-  return { success: true }
+  return { success: true, delivered_file: hasUpload ? 'uploaded' : 'original' }
 }
 
 async function handleGetOrderContent(supabaseAdmin, password, adminPassword, orderId) {
