@@ -25,14 +25,23 @@ export async function onRequest(context) {
   const url = new URL(request.url)
   const path = url.pathname.replace('/api/admin', '')
 
-  const body = await request.json()
-  const { password, ...rest } = body
-
   const supabaseAdmin = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
   const adminPassword = env.ADMIN_PASSWORD || 'admin123'
   const deepseekApiKey = env.DEEPSEEK_API_KEY
 
   try {
+    // 文件上传使用 FormData，不是 JSON，需单独处理
+    if (path === '/upload-file') {
+      const formData = await request.formData()
+      const pwd = formData.get('password')
+      mustAuth(pwd, adminPassword)
+      return await handleUploadFile(request, supabaseAdmin, env, formData)
+    }
+
+    // 其他接口都使用 JSON body
+    const body = await request.json()
+    const { password, ...rest } = body
+
     switch (path) {
       case '/auth':
         return json(await handleAuth(password, adminPassword))
@@ -56,8 +65,6 @@ export async function onRequest(context) {
         return json(await handleGetOrderContent(supabaseAdmin, password, adminPassword, rest.orderId))
       case '/generate-proxy':
         return json(await handleGenerateProxy(password, adminPassword, deepseekApiKey, rest.prompt))
-      case '/upload-file':
-        return await handleUploadFile(request, supabaseAdmin, env, password, adminPassword)
       default:
         return json({ error: '接口不存在' }, 404)
     }
@@ -78,10 +85,8 @@ async function handleAuth(password, adminPassword) {
   return { success: true, token: password }
 }
 
-async function handleUploadFile(request, supabaseAdmin, env, password, adminPassword) {
-  mustAuth(password, adminPassword)
+async function handleUploadFile(request, supabaseAdmin, env, formData) {
   try {
-    const formData = await request.formData()
     const file = formData.get('file')
     const orderId = formData.get('orderId')
     if (!file || !orderId) return json({ error: '缺少文件或订单ID' }, 400)
