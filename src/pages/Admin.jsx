@@ -29,6 +29,8 @@ export default function Admin() {
   const [showConfig, setShowConfig] = useState(false)
   const [newOrderAlert, setNewOrderAlert] = useState(false)
   const [lastRefresh, setLastRefresh] = useState(null)
+  const [deleteMode, setDeleteMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
   // --- confirm dialog state ---
   const [confirm, setConfirm] = useState({ isOpen: false, title: '', message: '', onConfirm: null })
@@ -216,11 +218,13 @@ export default function Admin() {
   }
 
   // --- 删除订单 ---
-  const handleDeleteOrder = async (orderId) => {
+  const handleDeleteOrder = async (orderId, orderIds) => {
     setLoadingStates(prev => ({ ...prev, delete: true }))
     try {
-      await api.adminDeleteOrder(password, orderId)
-      toast.success('订单已删除')
+      await api.adminDeleteOrder(password, orderId, orderIds)
+      toast.success(`已删除 ${orderIds?.length || 1} 个订单`)
+      setSelectedIds(new Set())
+      setDeleteMode(false)
       loadOrders()
     } catch (err) {
       toast.error('删除失败: ' + err.message)
@@ -238,6 +242,37 @@ export default function Admin() {
         handleDeleteOrder(order.id)
       },
     })
+  }
+
+  // --- 批量删除 ---
+  const toggleSelect = (orderId) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(orderId)) next.delete(orderId)
+      else next.add(orderId)
+      return next
+    })
+  }
+
+  const requestBatchDelete = () => {
+    if (selectedIds.size === 0) return
+    setConfirm({
+      isOpen: true,
+      title: '批量删除订单',
+      message: `确定要删除选中的 ${selectedIds.size} 个订单吗？这些订单的付款截图、AI内容和上传的修改稿都会被永久删除，且不可恢复。`,
+      onConfirm: () => {
+        setConfirm(prev => ({ ...prev, isOpen: false }))
+        handleDeleteOrder(null, Array.from(selectedIds))
+      },
+    })
+  }
+
+  const toggleAllSelect = () => {
+    if (selectedIds.size === displayedOrders.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(displayedOrders.map(o => o.id)))
+    }
   }
 
   // --- 下载 ---
@@ -305,6 +340,14 @@ export default function Admin() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => { setDeleteMode(!deleteMode); setSelectedIds(new Set()) }}
+            className={`px-3 py-1.5 text-sm rounded-lg hover:bg-gray-200 ${
+              deleteMode ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {deleteMode ? '✔ 完成' : '🗑️ 批量删除'}
+          </button>
+          <button
             onClick={() => setShowConfig(true)}
             className="px-3 py-1.5 text-sm bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
           >
@@ -318,6 +361,29 @@ export default function Admin() {
           </button>
         </div>
       </div>
+
+      {/* 批量删除操作栏 */}
+      {deleteMode && (
+        <div className="flex items-center gap-3 mb-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={selectedIds.size === displayedOrders.length && displayedOrders.length > 0}
+              onChange={toggleAllSelect}
+              className="w-4 h-4"
+            />
+            全选当前列表
+          </label>
+          <button
+            onClick={requestBatchDelete}
+            disabled={selectedIds.size === 0 || loadingStates?.delete}
+            className="px-4 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+          >
+            {loadingStates?.delete ? '⏳ 删除中...' : `🗑️ 删除选中 (${selectedIds.size})`}
+          </button>
+          <span className="text-xs text-red-500 ml-auto">勾选后点击删除，永久删除不可恢复</span>
+        </div>
+      )}
 
       {/* 统计看板 */}
       <AdminDashboard orders={orders} />
@@ -355,6 +421,9 @@ export default function Admin() {
               onDownload={handleDownload}
               onSaveContent={handleSaveContent}
               onDeleteOrder={requestDeleteOrder}
+              deleteMode={deleteMode}
+              selected={selectedIds.has(order.id)}
+              onToggleSelect={toggleSelect}
             />
           ))}
         </div>

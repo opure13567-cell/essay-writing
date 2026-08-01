@@ -66,7 +66,7 @@ export async function onRequest(context) {
       case '/generate-proxy':
         return json(await handleGenerateProxy(password, adminPassword, deepseekApiKey, rest.prompt))
       case '/delete-order':
-        return json(await handleDeleteOrder(supabaseAdmin, password, adminPassword, rest.orderId))
+        return json(await handleDeleteOrder(supabaseAdmin, password, adminPassword, rest.orderId, rest.orderIds))
       default:
         return json({ error: '接口不存在' }, 404)
     }
@@ -281,38 +281,43 @@ async function handleGetOrderContent(supabaseAdmin, password, adminPassword, ord
   return { ai_content: data.ai_content, edited_content: data.edited_content, payment_screenshot: data.payment_screenshot }
 }
 
-async function handleDeleteOrder(supabaseAdmin, password, adminPassword, orderId) {
+async function handleDeleteOrder(supabaseAdmin, password, adminPassword, orderId, orderIds) {
   mustAuth(password, adminPassword)
-  if (!orderId) throw new Error('缺少订单ID')
+  // 支持单个 orderId 或批量 orderIds
+  const ids = (Array.isArray(orderIds) && orderIds.length > 0) ? orderIds : (orderId ? [orderId] : [])
+  if (!ids.length) throw new Error('缺少订单ID')
 
-  // 先查出订单，拿到上传文件URL以便删除存储文件
-  const { data: order } = await supabaseAdmin
+  // 查出订单，拿到上传文件URL以便删除存储文件
+  const { data: orders } = await supabaseAdmin
     .from('orders')
-    .select('plagiarism_report')
-    .eq('id', orderId)
-    .single()
+    .select('id, plagiarism_report')
+    .in('id', ids)
 
-  // 删除存储中的修改稿文件
-  if (order?.plagiarism_report) {
-    try {
-      const url = order.plagiarism_report
-      const match = url.match(/\/uploads\/([^?]+)$/)
-      if (match) {
-        await supabaseAdmin.storage.from('uploads').remove([match[1]])
+  // 批量删除存储中的修改稿文件
+  if (orders && orders.length > 0) {
+    const files = orders
+      .map(o => {
+        const m = (o.plagiarism_report || '').match(/\/uploads\/([^?]+)$/)
+        return m ? m[1] : null
+      })
+      .filter(Boolean)
+    if (files.length > 0) {
+      try {
+        await supabaseAdmin.storage.from('uploads').remove(files)
+      } catch (e) {
+        console.error('删除存储文件失败:', e.message)
       }
-    } catch (e) {
-      console.error('删除存储文件失败:', e.message)
     }
   }
 
-  // 删除订单记录
+  // 批量删除订单记录
   const { error } = await supabaseAdmin
     .from('orders')
     .delete()
-    .eq('id', orderId)
+    .in('id', ids)
 
   if (error) throw new Error('删除失败: ' + error.message)
-  return { success: true }
+  return { success: true, deleted: ids.length }
 }
 
 async function handleGetConfig(supabaseAdmin, password, adminPassword) {

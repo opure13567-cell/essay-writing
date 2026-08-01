@@ -20,6 +20,9 @@ export default function OrderCard({
   onDownload,
   onSaveContent,
   onDeleteOrder,
+  deleteMode,
+  selected,
+  onToggleSelect,
 }) {
   const [screenshot, setScreenshot] = useState(null)
   const [loadingScreenshot, setLoadingScreenshot] = useState(false)
@@ -48,7 +51,17 @@ export default function OrderCard({
     <div className={`border border-gray-200 rounded-lg p-4 space-y-3 border-l-4 ${borderColor}`}>
       {/* 头部：ID + 价格 + 状态 */}
       <div className="flex items-center justify-between">
-        <span className="font-medium text-gray-800">#{order.id}</span>
+        <div className="flex items-center gap-2">
+          {deleteMode && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect(order.id)}
+              className="w-4 h-4 accent-red-500"
+            />
+          )}
+          <span className="font-medium text-gray-800">#{order.id}</span>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-600">¥{order.price}</span>
           <StatusBadge status={order.status} />
@@ -108,7 +121,7 @@ export default function OrderCard({
       />
 
       {/* 删除订单 */}
-      {onDeleteOrder && (
+      {onDeleteOrder && !deleteMode && (
         <button
           onClick={() => onDeleteOrder(order)}
           disabled={loadingStates?.delete}
