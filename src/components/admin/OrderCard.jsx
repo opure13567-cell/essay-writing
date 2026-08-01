@@ -19,6 +19,7 @@ export default function OrderCard({
   onComplete,
   onDownload,
   onSaveContent,
+  onDeleteOrder,
 }) {
   const [screenshot, setScreenshot] = useState(null)
   const [loadingScreenshot, setLoadingScreenshot] = useState(false)
@@ -105,6 +106,17 @@ export default function OrderCard({
         onComplete={onComplete}
         onDownload={onDownload}
       />
+
+      {/* 删除订单 */}
+      {onDeleteOrder && (
+        <button
+          onClick={() => onDeleteOrder(order)}
+          disabled={loadingStates?.delete}
+          className="w-full text-xs text-gray-300 hover:text-red-500 hover:bg-red-50 rounded py-1.5 transition-colors"
+        >
+          {loadingStates?.delete ? '⏳ 删除中...' : '🗑️ 删除此订单'}
+        </button>
+      )}
 
       {/* 内容编辑器 */}
       <ContentEditor

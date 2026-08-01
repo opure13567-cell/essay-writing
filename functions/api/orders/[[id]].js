@@ -97,7 +97,7 @@ async function listOrders(supabaseAdmin, userToken) {
 async function getOrder(supabaseAdmin, userToken, orderId) {
   const { data, error } = await supabaseAdmin
     .from('orders')
-    .select('*')
+    .select('id, type, description, word_count, price, status, created_at, deadline, is_rush, ai_content, edited_content')
     .eq('id', orderId)
     .eq('user_token', userToken)
     .single()

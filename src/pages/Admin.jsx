@@ -215,6 +215,31 @@ export default function Admin() {
     setLoadingStates(prev => ({ ...prev, upload: false }))
   }
 
+  // --- 删除订单 ---
+  const handleDeleteOrder = async (orderId) => {
+    setLoadingStates(prev => ({ ...prev, delete: true }))
+    try {
+      await api.adminDeleteOrder(password, orderId)
+      toast.success('订单已删除')
+      loadOrders()
+    } catch (err) {
+      toast.error('删除失败: ' + err.message)
+    }
+    setLoadingStates(prev => ({ ...prev, delete: false }))
+  }
+
+  const requestDeleteOrder = (order) => {
+    setConfirm({
+      isOpen: true,
+      title: '删除订单',
+      message: `确定要删除订单 #${order.id} 吗？该订单的付款截图、AI内容和上传的修改稿都会被永久删除，且不可恢复。`,
+      onConfirm: () => {
+        setConfirm(prev => ({ ...prev, isOpen: false }))
+        handleDeleteOrder(order.id)
+      },
+    })
+  }
+
   // --- 下载 ---
   const handleDownload = (order) => {
     downloadDocx(order)
@@ -329,6 +354,7 @@ export default function Admin() {
               onComplete={requestComplete}
               onDownload={handleDownload}
               onSaveContent={handleSaveContent}
+              onDeleteOrder={requestDeleteOrder}
             />
           ))}
         </div>

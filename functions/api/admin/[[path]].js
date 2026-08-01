@@ -65,6 +65,8 @@ export async function onRequest(context) {
         return json(await handleGetOrderContent(supabaseAdmin, password, adminPassword, rest.orderId))
       case '/generate-proxy':
         return json(await handleGenerateProxy(password, adminPassword, deepseekApiKey, rest.prompt))
+      case '/delete-order':
+        return json(await handleDeleteOrder(supabaseAdmin, password, adminPassword, rest.orderId))
       default:
         return json({ error: '接口不存在' }, 404)
     }
@@ -92,11 +94,19 @@ async function handleUploadFile(request, supabaseAdmin, env, formData) {
     if (!file || !orderId) return json({ error: '缺少文件或订单ID' }, 400)
 
     const bytes = await file.arrayBuffer()
-    const fileName = `modified_${orderId}_${Date.now()}.docx`
+    // 保留扩展名信息，但文件名只用ASCII字符（Supabase Storage禁止中文文件名）
+    const originalName = file.name || `modified_${orderId}.docx`
+    const lower = originalName.toLowerCase()
+    const ext = lower.endsWith('.docx') ? '.docx' : (lower.endsWith('.doc') ? '.doc' : '.docx')
+    const fileName = `mod_${orderId}_${Date.now()}${ext}`
+    // 根据扩展名设置正确的内容类型
+    const contentType = ext === '.docx'
+      ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      : 'application/msword'
 
     const { data, error } = await supabaseAdmin.storage
       .from('uploads')
-      .upload(fileName, bytes, { contentType: file.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', upsert: true })
+      .upload(fileName, bytes, { contentType, upsert: true })
 
     if (error) throw new Error('上传失败: ' + error.message)
 
@@ -269,6 +279,40 @@ async function handleGetOrderContent(supabaseAdmin, password, adminPassword, ord
     .single()
   if (error || !data) throw new Error('订单不存在')
   return { ai_content: data.ai_content, edited_content: data.edited_content, payment_screenshot: data.payment_screenshot }
+}
+
+async function handleDeleteOrder(supabaseAdmin, password, adminPassword, orderId) {
+  mustAuth(password, adminPassword)
+  if (!orderId) throw new Error('缺少订单ID')
+
+  // 先查出订单，拿到上传文件URL以便删除存储文件
+  const { data: order } = await supabaseAdmin
+    .from('orders')
+    .select('plagiarism_report')
+    .eq('id', orderId)
+    .single()
+
+  // 删除存储中的修改稿文件
+  if (order?.plagiarism_report) {
+    try {
+      const url = order.plagiarism_report
+      const match = url.match(/\/uploads\/([^?]+)$/)
+      if (match) {
+        await supabaseAdmin.storage.from('uploads').remove([match[1]])
+      }
+    } catch (e) {
+      console.error('删除存储文件失败:', e.message)
+    }
+  }
+
+  // 删除订单记录
+  const { error } = await supabaseAdmin
+    .from('orders')
+    .delete()
+    .eq('id', orderId)
+
+  if (error) throw new Error('删除失败: ' + error.message)
+  return { success: true }
 }
 
 async function handleGetConfig(supabaseAdmin, password, adminPassword) {

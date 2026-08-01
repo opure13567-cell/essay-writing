@@ -27,11 +27,32 @@ export async function onRequest(context) {
     }
   } catch {}
 
+  const studentId = personalInfo.student_id || 'unknown'
+  const name = personalInfo.name || 'unknown'
+
+  // 如果有管理员上传的修改稿，直接返回上传的文件
+  if (order.plagiarism_report) {
+    const fileRes = await fetch(order.plagiarism_report)
+    if (!fileRes.ok) {
+      return new Response('文件获取失败', { status: 502 })
+    }
+    const blob = await fileRes.arrayBuffer()
+    const lower = order.plagiarism_report.toLowerCase()
+    const ext = lower.endsWith('.doc') ? '.doc' : '.docx'
+    const contentType = ext === '.doc'
+      ? 'application/msword'
+      : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    return new Response(blob, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(`${studentId}${name}${ext}`)}"`,
+      },
+    })
+  }
+
   let content = order.edited_content || order.ai_content || ''
   content = cleanMarkdown(content)
 
-  const studentId = personalInfo.student_id || 'unknown'
-  const name = personalInfo.name || 'unknown'
   const fileName = `${studentId}${name}.doc`
 
   // 个人信息行：姓名、学院、专业及班级、年级、学号（不包含家乡）
