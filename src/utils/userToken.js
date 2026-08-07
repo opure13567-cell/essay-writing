@@ -1,4 +1,6 @@
 const TOKEN_KEY = 'essay_user_token'
+const NAME_KEY = 'essay_user_name'
+const STUDENT_KEY = 'essay_student_id'
 
 function safeGet(key) {
   try {
@@ -22,4 +24,20 @@ export function getUserToken() {
     safeSet(TOKEN_KEY, token)
   }
   return token
+}
+
+export function getStudentName() {
+  return safeGet(NAME_KEY)
+}
+
+export function setStudentName(name) {
+  safeSet(NAME_KEY, name)
+}
+
+export function getStudentId() {
+  return safeGet(STUDENT_KEY)
+}
+
+export function setStudentId(id) {
+  safeSet(STUDENT_KEY, id)
 }

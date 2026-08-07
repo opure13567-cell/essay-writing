@@ -1,7 +1,16 @@
-import { getUserToken } from './userToken'
+import { getUserToken, getStudentName, getStudentId } from './userToken'
 
 const BASE = '/api'
 const TIMEOUT_MS = 20000
+
+function identityHeaders() {
+  const headers = { 'X-User-Token': getUserToken() }
+  const name = getStudentName()
+  const sid = getStudentId()
+  if (name) headers['X-User-Name'] = name
+  if (sid) headers['X-User-Student-Id'] = sid
+  return headers
+}
 
 async function request(method, path, body, retries = 2) {
   for (let i = 0; i <= retries; i++) {
@@ -14,7 +23,7 @@ async function request(method, path, body, retries = 2) {
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          'X-User-Token': getUserToken(),
+          ...identityHeaders(),
         },
       }
       if (body) {
@@ -52,7 +61,7 @@ export const api = {
   uploadPayment: (id, formData) => {
     return fetch(`${BASE}/orders/${id}/payment`, {
       method: 'POST',
-      headers: { 'X-User-Token': getUserToken() },
+      headers: identityHeaders(),
       body: formData,
     }).then(r => r.json())
   },
