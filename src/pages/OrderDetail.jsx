@@ -170,6 +170,7 @@ export default function OrderDetail() {
                   </button>
                 </div>
               </div>
+              <p className="text-xs text-amber-600 mb-2">⚠️ 文件修改后文件名会乱码，敬请谅解，请自行重命名；文中其他格式未任何出错。</p>
               <p className="text-xs text-gray-400 mb-2">
                 共 {finalContent.replace(/[\s\n\r]/g, '').length} 字
               </p>
