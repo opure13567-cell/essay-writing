@@ -155,6 +155,7 @@ export default function OrderDetail() {
                 下载修改稿
               </a>
               <p className="text-xs text-gray-400 mt-2">点击下载修改后的Word文件，用WPS打开</p>
+              <p className="text-xs text-amber-600 mt-1">⚠️ 文件修改后文件名会乱码，敬请谅解，请自行重命名；文中其他格式未任何出错。</p>
             </div>
           ) : finalContent ? (
             <>
